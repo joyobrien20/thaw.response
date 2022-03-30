@@ -16,9 +16,9 @@ library("tibble")       # Needed for converting column to row names
 library("vegan")        #Used for rarifying
 
 ## Read the data into R 
-seq_tab <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "seqtab_final_") # fill this in with the file path for your DADA2 seqtab output
-taxonomy <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "tax_final (2)", na = c("","NA")) # fill this in with the tax_final file (DADA2 output but manipulated in Excel first)
-metadata <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "metadata_final") # fill this in with the metadata file 
+seq_tab <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "seqtab_final_") # fill this in with the file path for your DADA2 seqtab output
+taxonomy <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "tax_final (2)", na = c("","NA")) # fill this in with the tax_final file (DADA2 output but manipulated in Excel first)
+metadata <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "metadata_final") # fill this in with the metadata file 
 
 ## Define row names from the ASV column 
 seq_tab <- seq_tab %>%
@@ -95,11 +95,9 @@ dorm_noblank.nmds <- metaMDS(dm_noblank, k = 2, trymax = 1500) ## "k" is the num
 # Make a map data object
 mapdata_noblank <- sample_data(dorm_noblank.rarefied)
 mapdata_noblank$rowname <- rownames(mapdata_noblank)
-
-
 dorm.nmds.mapdata_noblank <- mapdata_noblank$points %>% data.frame() %>%
-  rownames_to_column(var = "rowname") %>%   # Adds column called "rowname" to metadata and NMDS
-  left_join(mapdata, by = "rowname") %>% # Matches row name from data to sample meta and joins them
+  rownames_to_column(var = "rowname")  # Adds column called "rowname" to metadata and NMDS
+  left_join(mapdata_noblank, by = "rowname") # Matches row name from data to sample meta and joins them
   
   dorm.nmds.mapdata_noblank <- dorm_noblank.nmds$points %>% data.frame() %>%
   rownames_to_column(var = "rowname") %>%   ##adds column called rowname to metadata and NMDS
@@ -107,8 +105,8 @@ dorm.nmds.mapdata_noblank <- mapdata_noblank$points %>% data.frame() %>%
 
 # Visualize with ggplot2 
 ggplot(dorm.nmds.mapdata_noblank, aes(x = MDS1, y = MDS2)) +
-  geom_point(aes(color = pre_post_thaw, shape = soil_biomass_endo_DNA),alpha = 1, size = 3)  ## alpha in aes shows more opaque (seethroughness)
+  geom_point(aes(color = pre_post_thaw, shape = site),alpha = 1, size = 3)  ## alpha in aes shows more opaque (seethroughness)
 #geom_text(aes(label = sample), size =2)
 
 # Save the phyloseq object to your desktop/folder if this is your final object
-
+saveRDS(dorm_noblank.rarified,"~/Desktop/dorm1rarefied.rds")
