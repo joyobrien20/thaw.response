@@ -29,8 +29,11 @@ taxonomy <- taxonomy %>%
 
 metadata <- metadata %>% 
   tibble::column_to_rownames("sample_name") %>% 
-  mutate(sample_blank = ifelse(test = grepl("BLANK", sample_ID), no = "Sample", yes = "BLANK"))
-
+  mutate(sample_blank = ifelse(test = grepl("BLANK", sample_ID), no = "Sample", yes = "BLANK")) %>%
+  mutate(core_rep = gsub("_POST_SOIL", "", sample_ID)) %>%
+  mutate(core_rep = gsub("_PRE_SOIL", "", core_rep))
+  
+# create a column for the core identifier and the rep identifier 
 ## Transform into matrices
 seq_tab <- as.matrix(seq_tab)
 taxonomy <- as.matrix(taxonomy)
@@ -104,8 +107,12 @@ dorm.nmds.mapdata_noblank <- mapdata_noblank$points %>% data.frame() %>%
   left_join(mapdata_noblank, by = "rowname") ## matches row name from data to sample meta and joins them
 
 # Visualize with ggplot2 
-ggplot(dorm.nmds.mapdata_noblank, aes(x = MDS1, y = MDS2)) +
-  geom_point(aes(color = pre_post_thaw, shape = site),alpha = 1, size = 3)  ## alpha in aes shows more opaque (seethroughness)
+ggplot(dorm.nmds.mapdata_noblank, aes(x = MDS1, y = MDS2, color = site)) + #sets the default for the sub statement
+  geom_point(aes(shape = pre_post_thaw),alpha = 1, size = 3) +
+  geom_line(aes(group = core_rep, color = site))+
+  geom_text(aes(label = sample_ID), size = 2, color = "black")
+  
+  ## alpha in aes shows more opaque (seethroughness)
 #geom_text(aes(label = sample), size =2)
 
 # Save the phyloseq object to your desktop/folder if this is your final object
