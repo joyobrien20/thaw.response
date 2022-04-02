@@ -80,6 +80,9 @@ hist(sort(colSums(otu_table(dorm_noblank))))
 # You will now complete the rarifying process
 dorm_noblank.rarefied = rarefy_even_depth(dorm_noblank, rngseed = 1, sample.size = 5000, replace = FALSE) ## removed sample sums but may put back
 
+# Note for Hannah: I went from 51 samples to 31 samples after removing blanks (approx 5 blanks) 
+# and rarifying, is that okay to lost that many samples?
+
 # Visualize/check rarefaction plot
 rarecurve(t(otu_table(dorm_noblank.rarefied)), step = 50, cex = 0.5, label = FALSE)
 
@@ -116,4 +119,4 @@ ggplot(dorm.nmds.mapdata_noblank, aes(x = MDS1, y = MDS2, color = site)) + #sets
 #geom_text(aes(label = sample), size =2)
 
 # Save the phyloseq object to your desktop/folder if this is your final object
-saveRDS(dorm_noblank.rarified,"~/Desktop/dorm1rarefied.rds")
+saveRDS(dorm_noblank.rarefied,"~/Desktop/dorm1rarefied.rds")
