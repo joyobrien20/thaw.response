@@ -50,6 +50,7 @@ summary(linearmodel_respDOCpost)
 linearmodel_respDOCpost_test <- lm(Cumulative_Respiration ~ DOC_post, family = gaussian, data = respdoctdn)
 print(linearmodel_respDOCpost_test)
 summary(linearmodel_respDOCpost_test)
+
 # Visualize the results of the glm with ggplot, note the log10 transformation
 ggplot(linearmodel_respDOCpost, aes(x= Cumulative_Respiration, y = DOC_post) + #color = linearmodel_respDOCpost[["data"]][["site"]])) +
   geom_point() + # (aes(color = linearmodel_respDOCpost[["data"]][["site"]])) +
