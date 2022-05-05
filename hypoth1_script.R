@@ -69,6 +69,66 @@ ggplot(linearmodel_respDOCpost, aes(x = Cumulative_Respiration, y = DOC_post)) +
 ggplot(linearmodel_respDOCpost, aes(x = Cumulative_Respiration, y = DOC_post)) +
            geom_point() + 
            geom_smooth(method = "lm")
+#*****************************************************************
+# Here we will be running the glm with DOC_post on the x axis and cumulative respiration on the y-axis, this may actually make more sense
+# Visualizing the data to start off 
+scatter.smooth(x=doctdn$DOC_post, y = resp$Cumulative_Respiration) 
+
+# We need to check if the dependent variable, DOC_post in this case, is close to normal
+par(mfrow=c(1, 2)) # divide graph area in 2 columns
+
+# Look at the density of cumulative respiration
+plot(density(resp$Cumulative_Respiration), main="Cumulative_Respiration", ylab="Frequency", 
+     sub=paste("Skewness:", round(e1071::skewness(resp$Cumulative_Respiration), 3)))
+polygon(density(resp$Cumulative_Respiration), col="darkorange")
+
+# Look at the density of DOC_pre/post or TDN_pre/post
+plot(density(doctdn$DOC_post), main="DOC_post", ylab="Frequency", 
+     sub=paste("Skewness:", round(e1071::skewness(doctdn$DOC_post), 3)))
+
+polygon(density(doctdn$DOC_post), col="darkorange")
+
+# Merge the data frames
+respdoctdn<-merge(resp,doctdn)
+
+# Creating the GLM #### DO THIS WITH EACH RESPONSE VARIABLE, AND NAME IT ACCORDINGLY, ALSO GROUP BY SITE-probably with the 
+# actual running of the model and not in the code for ggplot ??
+linearmodel_respDOCpost <- glm(DOC_post ~ Cumulative_Respiration, family = gaussian, data = respdoctdn)
+# Look at the results of the glm
+print(linearmodel_respDOCpost)
+summary(linearmodel_respDOCpost)
+
+# Let's see if we get an R2 value from running lm instead of glm
+linearmodel_respDOCpost_test <- lm(Cumulative_Respiration ~ DOC_post, family = gaussian, data = respdoctdn)
+print(linearmodel_respDOCpost_test)
+summary(linearmodel_respDOCpost_test)
+
+# Visualize the results of the glm with ggplot, note the log10 transformation
+ggplot(linearmodel_respDOCpost, aes(x= DOC_post, y = Cumulative_Respiration + #color = linearmodel_respDOCpost[["data"]][["site"]])) +
+         geom_point() + # (aes(color = linearmodel_respDOCpost[["data"]][["site"]])) +
+         #scale_x_log10() +
+         #scale_y_log10() +
+         geom_smooth(method = "lm")
+       
+       # This code below seems to work for getting one line through the sites 
+       ggplot(linearmodel_respDOCpost, aes(x = DOC_post, y = Cumulative_Respiration)) +
+         geom_point(aes(color = linearmodel_respDOCpost[["data"]][["site"]])) +
+         scale_x_log10() +
+         scale_y_log10() +
+         geom_smooth(method = "lm")
+       
+       # Let's look at the plot that is not log transformed
+       ggplot(linearmodel_respDOCpost, aes(x = Cumulative_Respiration, y = DOC_post)) +
+         geom_point() + 
+         geom_smooth(method = "lm")
+
+
+
+
+
+
+
+
 
 # EXTRA BELOW
 # Check for continuous variables
