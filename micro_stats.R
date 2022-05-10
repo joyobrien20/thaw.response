@@ -1,5 +1,6 @@
 # Joy O'Brien
 # Microbial stats on Phyloseq object
+# PRELIM
 # April 29
 
 # Load the necessary packages (this is from the phyloseq tutorial)
@@ -9,36 +10,49 @@ library("readxl")       # necessary to import the data from Excel file
 library("dplyr")        # filter and reformat data frames
 library("tibble")       # Needed for converting column to row names
 library("vegan")
-library ("viridis")
-library ("RColorBrewer")
+library("viridis")
+library("RColorBrewer")
 library("colorRamps")
 library("colorspace")
 
-# Make a bar graph of the data based on division
+
+
+# FROM NATE'S 16S SCRIPT
+
+phylum.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Phylum"], sum, na.rm=TRUE)
+
+top5phyla = names(sort(phylum.sum, TRUE))[1:5]
+TP5 = prune_taxa((tax_table(dorm1rarefied)[, "Phylum"] %in% top5phyla), dorm1rarefied)
+
+##taxa barplot
+plot_bar(TP5, fill = "Phylum") +
+  geom_bar(aes(fill=Phylum), stat="identity", position="stack")+
+  scale_fill_manual(values = c("#ff9999", "#ffcc99", "#ffff99", "66b2ff", "99ffcc"))
+
+# Make a bar graph of the data based on division ##PLOT TOP 5 PHYLA TO SEE THIS BETTER 
 plot_bar(dorm1rarefied, fill = "Phylum")
 
 # But make it prettier
 plot_bar(dorm1rarefied, fill = "Phylum") + 
-  geom_bar(aes(fill= Phylum, x= sample_ID), stat="identity", position="stack") +
-  scale_fill_manual("Legend", values=c("Firmicutes"="black"))
-  
+  geom_bar(aes(fill = Phylum, x = sample_ID), stat = "identity", position = "stack") +
+  scale_fill_manual("Legend", values = c("Firmicutes" = "black"))
 
-# Basic heatmap
+# Now let's make a basic heatmap
 plot_heatmap(dorm1rarefied, method = "NMDS", distance = "bray")
 
 ### COME BACK TO THIS!
 
 # Alpha diversity
-plot_richness(dorm1rarefied, measures=c("Chao1", "Shannon"))
-shannon <- estimate_richness(dorm1rarefied, measures=c("Chao1", "Shannon")) %>%
-  geom_point(aes(size=2, shape=15))
+plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
+shannon <- estimate_richness(dorm1rarefied, measures = c("Chao1", "Shannon")) %>%
+  geom_point(aes(size = 2, shape = 15))
 
 
 ## Alpha diversity take two (https://micca.readthedocs.io/en/latest/phyloseq.html)
 # plot richness 
-plot_richness(dorm1rarefied, x="pre_post_thaw", color="site", measures=c("Observed"))
+plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Observed"))
 # Make a boxplot of the number of OTUs and Shannon entropy 
-plot_richness(dorm1rarefied, x="site", measures=c("Observed", "Shannon")) + geom_boxplot()
+plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + geom_boxplot()
 estimate_richness(dorm1rarefied)
 
 
@@ -59,9 +73,7 @@ phylum_colors <- c(
 )
 
 
-# Plot 
-
-
+# Plot with ggplot 
 ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) + 
   facet_grid(site~.) +
   geom_bar(stat = "identity") +
@@ -78,27 +90,19 @@ ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) +
   ylab("Relative Abundance (Phyla > 2%) \n") 
   #ggtitle("Phylum Composition of Lake Erie \n Bacterial Communities by Sampling Site") 
 
-# Unconstrained ordination
 
 # Scale reads to even depth 
 dorm_scale <- dorm1rarefied %>%
   scale_reads(round = "round") 
 
-# Fix month levels in sample_data
-#sample_data(erie_scale)$Month <- factor(
-  #sample_data(erie_scale)$Month, 
-  #levels = c("June", "July", "August", "September", "October")
-#)
-
-
-# Ordinate
+# Ordinate via PCOA
 dorm_pcoa <- ordinate(
   physeq = dorm1rarefied, 
   method = "PCoA", 
   distance = "bray"
 )
 
-# Plot 
+# Plot the PCOA
 plot_ordination(
   physeq = dorm1rarefied,
   ordination = dorm_pcoa,
@@ -113,14 +117,16 @@ plot_ordination(
   geom_point(colour = "grey90", size = 1.5) 
 
 
-# NMDS instead
+# Let's do an NMDS instead
 
-# ordinate 
+# Run the NMDS and ordinate 
 dorm_nmds <- ordinate(
   physeq = dorm1rarefied, 
   method = "NMDS", 
   distance = "bray"
 )
+print(dorm_nmds)
+summary(dorm_nmds)
 plot_ordination(
   physeq = dorm1rarefied,
   ordination = dorm_nmds,
@@ -134,8 +140,8 @@ plot_ordination(
   geom_point(aes(color = site), alpha = 0.7, size = 4) +
   geom_point(colour = "grey90", size = 1.5) 
 
-#PERMANOVA
-set.seed(1)
+# BELOW IS AN EXAMPLE OF A PERMANOVA
+
 
 # Calculate bray curtis distance matrix
 dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
@@ -150,7 +156,7 @@ adonis(dorm_bray ~ site, data = sampledf)
 beta <- betadisper(dorm_bray, sampledf$site)
 permutest(beta)
 
-## Constrianed ordination here###
+# Constrained ordination here 
 
 ## Alpha Diversity
 min_lib <- min(sample_sums(dorm1rarefied))
