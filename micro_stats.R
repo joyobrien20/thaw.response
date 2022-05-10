@@ -3,6 +3,10 @@
 # PRELIM
 # April 29
 
+# TO-DO: 
+#   Make the top 5 phyla figure prettier 
+#   NMDS / make this the hypoth 3 script (biplot and permanova)
+#   Alpha diveristy 
 # Load the necessary packages (this is from the phyloseq tutorial)
 library("phyloseq")
 library("ggplot2")      # graphics
