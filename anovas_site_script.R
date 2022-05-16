@@ -23,7 +23,11 @@ library(FSA) #installed for the dunntest
 # Read in the data 
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
 resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum (2)")
-
+ph_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_pre")
+ph_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_post")
+ph_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_both")
+EC_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_pre")
+EC_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_post")
 # FIRST: RUNNING ANOVA ON DOC POST THAW
 
 # Checking for normality with a Shapiro test 
@@ -91,4 +95,33 @@ kruskal.test(copy_number_per_gsoil_POST ~ site, data = cpnumb) # chi-squared = 6
 
 boxplot(copy_number_per_gsoil_POST ~ site, data = cpnumb)
 
+# pH pre-thaw ANOVA
+shapiro.test(ph_pre$pH) # yay it's normally distributed, p-value = 0.3505
+phpreaov <- aov(pH ~ site, data = ph_pre)
+print(phpreaov)
+summary(phpreaov)
+
+# pH post-thaw ANOVA 
+shapiro.test(ph_post$pH) # p-value = 0.05193 WHEW
+phpostaov <- aov(pH ~ site, data = ph_post)
+print(phpreaov)
+summary(phpostaov)
+
+# Comparing pre and post thaw pH
+phbothaov <- aov(pH_pre ~ pH_post, data = ph_both)
+summary(phbothaov)
+
+# EC pre-thaw ANOVA
+shapiro.test(EC_pre$EC_pre) # p-value = 0.8672
+ecpreaov <- aov(EC_pre ~ site, data = EC_pre)
+summary(ecpostaov)
+
+# EC post-thaw ANOVA 
+shapiro.test(EC_post$EC_post) # p-value = 0.4292
+ecpostaov <- aov(EC_post ~ site, data = EC_post)
+summary(ecpostaov)
+
+#Comparing pre and post thaw EC via ANOVA 
+ecboth <- aov(EC ~ EC_post, data = EC_both)
+summary (ecboth)
 
