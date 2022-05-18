@@ -1,7 +1,7 @@
 # Joy O'Brien
 # Master's work 
 # May 6, 2022
-# This script is a re-work of hypoth1_script taking into account advice from lab meeting on May 6, 2022
+# This script is a re-work of hypoth1_script taking into account advice from lab meeting on May 6, 2022 (hypoth 1 script has been renamed to DOC_TDN_respiration)
 
 # In this script we will work to: try a Spearman correlation b/w DOC and TDN and cumulative respiration
 # Also we will be working forward with DOC and TDN on the x-axis and respiration on the y-axis
