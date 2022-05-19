@@ -25,28 +25,31 @@ library(e1071) #for skewness function
 library(qqplotr)
 
 # Read in the data from excel
-doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_post")
-resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
+doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_resp")
+#resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
 copynumb <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "copy_numbers")
 resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum_forcopynumb")
 
-# Performing Spearman rank correlations on DOC_post vs. respiration
+# Performing Spearman rank correlations on DOC vs. respiration
 
 # Make a QQ plot 
-qqnorm(x = doctdn$DOC_post, y = resp$Cumulative_Respiration, main = "Q-Q Plot")
+qqnorm(x = doctdn$DOC_diff, y = resp$Cumulative_Respiration, main = "Q-Q Plot")
 
 # Trying a correlation test for DOC_post and respiration  
-doccorr <- cor.test(x = doctdn$DOC_post, y = resp$Cumulative_Respiration, method = "spearman") #p value = 2.045e-05, rho = 0.766087
+doccorr <- cor.test(x = doctdn$DOC_diff, y = resp$Cumulative_Respiration, method = "spearman") # p-value = 0.2096, rho = 0.2652174
 print(doccorr)
 
 # Merge the data frames
-respdoctdn <- merge(resp,doctdn)
+#respdoctdn <- merge(resp,doctdn_diff)
+
+
 
 # Visualize with ggplot
-ggplot(respdoctdn, aes(x = DOC_post, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = site, shape = core)) +
-  scale_x_log10() +
-  scale_y_log10()
+ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  #scale_x_log10() +
+  #scale_y_log10() +
+  geom_smooth(method = "lm")
 
 # Performing Spearman rank correlations on TDN_post and respiration
 

@@ -12,16 +12,24 @@
 # TO DO:
 # NEED TO CHECK TO SEE IF YOU ARE RUNNING THE KRUSKALL WITH THE RIGHT PARAMETERS
 
+#* Random script notes*
+#* 
+# Visualizing/checking for theoretical model distribution (https://www.statology.org/anova-assumptions/)
+#hist(doctdn$DOC_post)
+#qqnorm(anova_docpost$residuals)
+
+
 # Load the necessary libraries
 library(vegan)
 library(readxl)
 library(dplyr)
 library(FSA) #installed for the dunntest
 library(multcompView) # used for the tukey test
+library(ggplot2) # to make pretty figs 
 
 # Read in the data 
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
-resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum (2)")
+resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
 ph_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_pre")
 ph_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_post")
 ph_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_both")
@@ -31,56 +39,61 @@ TC_TN <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "TC_
 EC_both <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_both")
 GWC_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "GWC_both")
 texture <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Texture")
-# FIRST: RUNNING ANOVA ON DOC POST THAW
+doctdn_diff <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_diff")
 
-# Checking for normality with a Shapiro test 
-shapiro.test(doctdn$DOC_post) #p-value = 0.02452, not normal
+# FIRST: RUNNING STATS ON THE DIFFERENCE IN DOC AND TDN PRE AND POST THAW
+
+# Checking for normality with a Shapiro test for DOC diff
+shapiro.test(doctdn_diff$DOC_diff) #p-value = 0.0056; this data is not NORMAL
 
 # The data is NOT normally distrubuted so I am going to try a Kruskall-Wallis test 
-kruskal.test(DOC_post ~ site, data = doctdn) # Kruskal-Wallis chi-squared = 14.945, df = 2, p-value = 0.0005685
+kruskal.test(DOC_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared =  chi-squared = 4.16, df = 2, p-value = 0.1249
+# The difference in DOC pre and post thaw is not signficant across sites 
 
-# Since the p-value of the kruskal test is significant, we are going to run a DUNN test 
-# which I think is comparable to a tukey after an ANOVA 
-
+# May want to do a pairwise wilcox test for this ? http://www.sthda.com/english/wiki/kruskal-wallis-test-in-r
 dunnTest(DOC_post ~ site, data = doctdn, method = "bonferroni") # Check to see if the method is necessary? If it needs to be changed 
 
-#let's visualize DOC_post content across site 
-boxplot(DOC_post ~ site, data = doctdn)
+#let's visualize DOC_diff content across site 
+boxplot(DOC_diff ~ site, data = doctdn_diff)
 
-
-# Visualizing/checking for theoretical model distribution (https://www.statology.org/anova-assumptions/)
-#hist(doctdn$DOC_post)
-#qqnorm(anova_docpost$residuals)
-
-# NOW WE WILL BE MOVING ON TO ASSESS TND_POST BY SITE 
-shapiro.test(doctdn$TDN_post) #p-value = 0.008402; IT IS NOT NORMALLY DISTRIBUTED 
+# Checking for normality with a Shapiro test for TDN diff 
+shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
 
 # Therefore, we will run a Kruskall-Wallis test 
-kruskal.test(TDN_post ~ site, data = doctdn) #chi-squared = 19.86, df = 2, p-value = 4.869e-05
+kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
+# The difference in TDN pre and post thaw is statistically significant across sites
 
-# Since the p-value of the Kruskal for TDN_post is significant, we need to run a dunntest
-
-dunnTest(TDN_post ~ site, data = doctdn, method = "bonferroni") 
-
-# Now let's visualize with a boxplot
-boxplot(TDN_post ~ site, data = doctdn)
+# Since the p-value of the Kruskal for TDN_diff is significant, we need to run a dunntest. 
 
 # Now let's look at a dunn test
-dunnTest(TDN_post ~ site, data = doctdn, method = "bonferroni")
+dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
+
+# Now let's visualize with a boxplot
+boxplot(TDN_diff ~ site, data = doctdn_diff)
+
+# Making pretty boxplots: # NEED TO MAKE THEM PRETTY FOR PUB AND THESIS, RIGHT NOW THEY ARE JUST PLACE HOLDERS IN THESIS 
+# DOC difference boxplot 
+
+geom_boxplot(doctdn_diff)
+
+#**********************************************************************
 
 # NOW TRANSITIONING TO CUMULATIVE RESPIRATION
 
 # Let's look at the differences in cumulative respiration across sites 
-shapiro.test(resp$Cumulative_Respiration) #this is not normally distributed W = 0.6816, p-value = 5.808e-06
+shapiro.test(resp$Cumulative_Respiration) #this is not normally distributed W = 0.89709, p-value = 0.01868
 
 # Because of that, lets look at a Kruskal test
-kruskal.test(Cumulative_Respiration ~ site, data = resp) # Kruskal-Wallis chi-squared = 15.405, df = 2, p-value = 0.0004517
+kruskal.test(Cumulative_Respiration ~ site, data = resp) # Kruskal-Wallis chi-squared = 16.805, df = 2, p-value = 0.0002243
+# CUMMULATIVE RESPIRATION IS STATISTICALLY SIGNIFICANT ACROSS SITES
 
 # Now let's visualize witha boxplot 
 boxplot(Cumulative_Respiration ~ site, data = resp)
 
 # Let's run a dunn test for respiration and site 
-dunnTest(Cumulative_Respiration ~ site, data = resp) # still don't know if I should use a method or not 
+dunnTest(Cumulative_Respiration ~ site, data = resp, method ='bh') 
+
+
 
 # Need to do copy number pre and post thaw and maybe change in DOC or TDN? 
 
