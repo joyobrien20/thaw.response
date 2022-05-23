@@ -33,16 +33,14 @@ resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "
 # Performing Spearman rank correlations on DOC vs. respiration
 
 # Make a QQ plot 
-qqnorm(x = doctdn$DOC_diff, y = resp$Cumulative_Respiration, main = "Q-Q Plot")
+qqnorm(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, main = "Q-Q Plot")
 
 # Trying a correlation test for DOC_post and respiration  
-doccorr <- cor.test(x = doctdn$DOC_diff, y = resp$Cumulative_Respiration, method = "spearman") # p-value = 0.2096, rho = 0.2652174
+doccorr <- cor.test(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, method = "spearman") # p-value = 0.2096, rho = 0.2652174
 print(doccorr)
 
 # Merge the data frames
 #respdoctdn <- merge(resp,doctdn_diff)
-
-
 
 # Visualize with ggplot
 ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) + 
@@ -53,14 +51,15 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
 
 # Performing Spearman rank correlations on TDN_post and respiration
 
-tdncorr <- cor.test(x = doctdn$TDN_post, y = resp$Cumulative_Respiration, method = "spearman")
-print(tdncorr) # p-value = 0.001437, rho = 0.6234783
+tdncorr <- cor.test(x = doctdn$TDN_diff, y = doctdn$Cumulative_Respiration, method = "spearman")
+print(tdncorr) # p-value = 0.01201, rho = 0.468
 
 # Visualize with ggplot 
-ggplot(respdoctdn, aes(x = TDN_post, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = site, shape = core)) +
-  scale_x_log10() +
-  scale_y_log10()
+ggplot(doctdn, aes(x = TDN_diff, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  #scale_x_log10() +
+  #scale_y_log10()
+  geom_smooth(method = "lm")
 
 # This is the code that Hannah wrote to have the TDN_pre come in as dotted lines for comparison ##IF YOU ARE GOING TO USE THIS YOU NEED TO WORK THE PRE VALUES INTO THE FRAME YOU HAVE NOW 
 ggplot(respdoctdn, aes(x = TDN_post, y = Cumulative_Respiration)) + 
@@ -81,7 +80,7 @@ save("~/Desktop/joys_rdata.Rdata")
 # PERFORMING A GLM ON DOC_POST VS CUMULATIVE RESPIRATION 
 
 # Visualizing the data to start off 
-scatter.smooth(x = doctdn$DOC_post, y = resp$Cumulative_Respiration) 
+scatter.smooth(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration) 
 
 # We need to check if the dependent variable, DOC_post in this case, is close to normal
 par(mfrow = c(1, 2)) # divide graph area in 2 columns
@@ -103,9 +102,22 @@ respdoctdn <- merge(resp,doctdn)
 # Visualizing with ggplot 
 ggplot(respdoctdn, aes(x = DOC_post, y = Cumulative_Respiration)) + 
   geom_point()
-  
+ 
+# Testing out the use of a glm to show the DOC difference and the respiration response 
+
+glm_docdiff <- glm(DOC_diff ~ Cumulative_Respiration, family = gaussian, data = doctdn)
+print(glm_docdiff)
+summary(glm_docdiff)
+ggplot(glm_docdiff, aes(x = DOC_diff, y = Cumulative_Respiration)) +
+  geom_point(aes(color = glm_docdiff[["data"]][["site"]])) +
+  geom_smooth(method = "lm")
+
+ 
+# Transforming the data 
+docsqrt <- sqrt(doctdn$DOC_diff)
+
 # Creating the GLM
-linearmodel_respDOCpost <- glm(DOC_post ~ Cumulative_Respiration, family = gaussian, data = respdoctdn) #this needs to be fixed and site needs to be taken into account in addition to the pre-thaw values
+linearmodel_respDOCpost <- glm(DOC_post ~ Cumulative_Respiration, family = inverse.gaussian(), data = doctdn) #this needs to be fixed and site needs to be taken into account in addition to the pre-thaw values
 
 # Look at the results of the glm
 print(linearmodel_respDOCpost)

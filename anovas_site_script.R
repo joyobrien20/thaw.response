@@ -61,6 +61,7 @@ shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as e
 
 # Therefore, we will run a Kruskall-Wallis test 
 kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
+
 # The difference in TDN pre and post thaw is statistically significant across sites
 
 # Since the p-value of the Kruskal for TDN_diff is significant, we need to run a dunntest. 

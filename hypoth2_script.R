@@ -15,7 +15,9 @@ library(vegan)
 library(readxl)
 library(dplyr)
 library(ggplot2)
+library(tidyr)
 library(e1071) #for skewness function
+library(FSA)
 
 # Read in the data from excel
 cpnumb <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "copy_numbers")
@@ -28,8 +30,8 @@ resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "
 scatter.smooth(cpnumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration)
 
 # Checking for normality--totally forgot to do this! 
-shapiro.test(cpnumb$copy_number_per_gsoil_PRE) #p-value = 0.005065, not normal
-shapiro.test(resp4copy$Cumulative_Respiration) #p-value = 9.524e-06, not normal
+shapiro.test(cpnumb$copy_number_per_gsoil_PRE) #p-value = 0.005065 Data is not normal
+shapiro.test(resp4copy$Cumulative_Respiration) #p-value = 0.03419 data is not normal 
 
 # We need to check if the dependent variable, DOC_post in this case, is close to normal
 par(mfrow=c(1, 2)) # divide graph area in 2 columns
@@ -46,8 +48,55 @@ par(mfrow=c(1, 2)) # divide graph area in 2 columns
 # polygon(density(cpnumb$copy_number_per_gsoil_PRE), col="darkorange")
 
 # Merge the data frames
-respcpnumb <- merge(resp,cpnumb) 
+respcpnumb <- merge(resp4copy,cpnumb) 
 
+# Okay let's run a Kruskall Wallis and then a dunn test (maybe) for cum resp and pre-thaw copy numbers
+kruskal.test(Cumulative_Respiration ~ copy_number_per_gsoil_PRE, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+# cumulative respiration and copy number per g soil pre is not significant 
+
+# Okay let's run a Kruskall Wallis for cum respiration and post thaw copy numbers
+kruskal.test(Cumulative_Respiration ~ copy_number_per_gsoil_POST, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589 SAME P VALUE?
+
+# FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ PRE THAW COPY NUMBER 
+resp_pre_corr <- cor.test(x = respcpnumb$Cumulative_Respiration, y = respcpnumb$copy_number_per_gsoil_PRE, method = "spearman")
+print(resp_pre_corr)
+
+# Visualize here 
+ggplot(respcpnumb, aes(x = Cumulative_Respiration, y = copy_number_per_gsoil_PRE)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm")
+
+# Hannah's code to visualize both pre and post as a response to respiration: 
+pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
+  ggplot(aes(x = Cumulative_Respiration, y = copy_number, color = Pre_post_copynumber, group = Pre_post_copynumber, shape = site)) + 
+           geom_point() + stat_smooth(method = "lm")
+  
+
+# NEXT LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
+resp_post_corr <- cor.test(x = respcpnumb$Cumulative_Respiration, y = respcpnumb$copy_number_per_gsoil_POST, method = "spearman")
+print(resp_post_corr)
+
+# Visualize 
+ggplot(respcpnumb, aes(x = Cumulative_Respiration, y = copy_number_per_gsoil_POST)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm")
+
+
+# NOW WE WILL RUN KRUSKALL WALLIS ON BACTERIAL ABUMDANCE PRE THAW BY SITE 
+kruskal.test(copy_number_per_gsoil_PRE ~ site, data = respcpnumb) # chi-squared = 3.1581, df = 2, p-value = 0.2062
+
+# AND WE WILL RUN KRUSKALL ON BACTERIAL ABUNDANCE POST THAW BY SITE
+kruskal.test(copy_number_per_gsoil_POST ~ site, data = respcpnumb) # significant: Kruskal-Wallis chi-squared = 6.7302, df = 2, p-value = 0.03456
+dunnTest(copy_number_per_gsoil_POST ~ site, data = respcpnumb, method = 'bh') # not sure if I should be using bh or holms? 
+
+# Now let's look to see if there is any significance pre and post thaw by site for copy numbers 
+kruskal.test(copy_number_per_gsoil_PRE ~ copy_number_per_gsoil_POST, data = respcpnumb) # NOT SIGNIF Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+
+# *************************************************************************************************************************************************************
 # Creating the glm THIS NEEDS TO BE EDITED
 linearmodel_respcopypre <- glm(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, family=gaussian, data = respcpnumb)
 
