@@ -35,7 +35,7 @@ resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "
 # Make a QQ plot 
 qqnorm(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, main = "Q-Q Plot")
 
-# Trying a correlation test for DOC_post and respiration  
+# Trying a correlation test for DOC_diff and respiration  
 doccorr <- cor.test(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, method = "spearman") # p-value = 0.2096, rho = 0.2652174
 print(doccorr)
 

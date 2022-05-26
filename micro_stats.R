@@ -18,50 +18,98 @@ library("viridis")
 library("RColorBrewer")
 library("colorRamps")
 library("colorspace")
+library("ggpubr")
+library("readxl")
+library("FSA")
 
 
+# Looking at the phyloseq object
 
-# FROM NATE'S 16S SCRIPT
-
+# Obtain the top 5 phyla
 phylum.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Phylum"], sum, na.rm=TRUE)
-
 top5phyla = names(sort(phylum.sum, TRUE))[1:5]
 TP5 = prune_taxa((tax_table(dorm1rarefied)[, "Phylum"] %in% top5phyla), dorm1rarefied)
 
-##taxa barplot
+# Visualize with a taxa barplot (Nate's script)
 plot_bar(TP5, fill = "Phylum") +
   geom_bar(aes(fill=Phylum), stat="identity", position="stack")+
   scale_fill_manual(values = c("#ff9999", "#ffcc99", "#ffff99", "66b2ff", "99ffcc"))
 
-# Make a bar graph of the data based on division ##PLOT TOP 5 PHYLA TO SEE THIS BETTER 
+# Looking at ALL of the phyla within the data
 plot_bar(dorm1rarefied, fill = "Phylum")
 
-# But make it prettier
+# Cleaning up the phyla barplot
 plot_bar(dorm1rarefied, fill = "Phylum") + 
   geom_bar(aes(fill = Phylum, x = sample_ID), stat = "identity", position = "stack") +
   scale_fill_manual("Legend", values = c("Firmicutes" = "black"))
 
-# Now let's make a basic heatmap
-plot_heatmap(dorm1rarefied, method = "NMDS", distance = "bray")
+#***********************************************************************
+# Creating a table of Simpson and Shannon diversity
+# THE FOLLOWING IS ONLY ON PRE THAW SAMPLES 
+# Subset pre-thaw samples from the original phyloseq object (if needed)
+presamples <- subset_samples(dorm1rarefied, pre_post_thaw == "pre")
+pre_meta <- subset_samples(dorm1rarefied_sam_data, pre_post_thaw == "pre")
 
-### COME BACK TO THIS!
+# Run diversity analysis
+shansimp_pre <- estimate_richness(presamples, measures = c("Simpson", "Shannon"))
+print(shansimp_pre)
 
-# Alpha diversity
-plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
-shannon <- estimate_richness(dorm1rarefied, measures = c("Chao1", "Shannon")) %>%
-  geom_point(aes(size = 2, shape = 15))
+# Visualize
+boxplot(shansimp_pre)
+
+# Let's see if it's normally distributed
+hist(shansimp_pre$Shannon, main = "Shannon index", xlab = "")
+shapiro.test(shansimp_pre$Shannon) # normally distributed woo
+
+#***********************************************************************
+# TOP 5 PHYLA IN PRE THAW SAMPLES 
+
+# NOTE: if you end up using this figure in thesis/manuscript you need to make it cleaner
+# Obtain the top 5 phyla
+phylum.sum_pre <- tapply(taxa_sums(presamples), tax_table(presamples)[, "Phylum"], sum, na.rm=TRUE)
+top5phyla_pre = names(sort(phylum.sum, TRUE))[1:5]
+TP5_pre = prune_taxa((tax_table(presamples)[, "Phylum"] %in% top5phyla), presamples)
+
+# Visualize the top 5 phyla in pre-thaw samples
+plot_bar(TP5_pre, x = "sample_ID", fill = "Phylum") +
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack")
 
 
-## Alpha diversity take two (https://micca.readthedocs.io/en/latest/phyloseq.html)
-# plot richness 
-plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Observed"))
-# Make a boxplot of the number of OTUs and Shannon entropy 
-plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + geom_boxplot()
-estimate_richness(dorm1rarefied)
+#************************************************************************************
+# TOP 5 PHYLA IN POST THAW SAMPLES 
+
+# Subset post-thaw samples from the original phyloseq object
+# NOTE: if you end up using this figure in thesis/manuscript you need to make it cleaner
+postsamples <- subset_samples(dorm1rarefied, pre_post_thaw == "post")
+shansimp_post <- estimate_richness(postsamples, measures = c("Simpson", "Shannon"))
+print(shansimp_post)
+
+# Obtain the top 5 phyla
+phylum.sum_post <- tapply(taxa_sums(postsamples), tax_table(postsamples)[, "Phylum"], sum, na.rm=TRUE)
+top5phyla_post = names(sort(phylum.sum, TRUE))[1:5]
+TP5_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top5phyla), postsamples)
+
+# Visualize the top 5 phyla in post-thaw samples
+plot_bar(TP5_post, x = "sample_ID", fill = "Phylum") +
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack")
+#************************************************************************************
+
+# Working with distance matrices 
+dist.bc <- distance(dorm1rarefied, method = "bray")
+print(dist.bc)
+
+dist.uf <- distance(dorm1rarefied, method = "unifrac")
+ord <- ordinate(dorm1rarefied, method = "MDS", distance = "bray")
+
+plot_ordination(dorm1rarefied, ord, color = "site", shape = "pre_post_thaw") +
+  stat_ellipse(aes(group = site))
+
+# Insert permanova code here? 
 
 
-rich <- estimate_richness(dorm1rarefied)
 
+
+# Extra code for making a bar plot
 #Stacked bar plot (https://deneflab.github.io/MicrobeMiseq/demos/mothur_2_phyloseq.html)
 dorm_phylum <- dorm1rarefied %>%
   tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
@@ -98,6 +146,8 @@ ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) +
 # Scale reads to even depth 
 dorm_scale <- dorm1rarefied %>%
   scale_reads(round = "round") 
+
+# Ordination 
 
 # Ordinate via PCOA
 dorm_pcoa <- ordinate(
@@ -142,24 +192,84 @@ plot_ordination(
                                 "#4daf4a", "#1919ff", "darkorchid3", "magenta")
   ) +
   geom_point(aes(color = site), alpha = 0.7, size = 4) +
-  geom_point(colour = "grey90", size = 1.5) 
+  geom_point(colour = "grey90", size = 1.5)
 
-# BELOW IS AN EXAMPLE OF A PERMANOVA
-
-
+print(dorm_nmds)
+  
+#**************************************************************************
 # Calculate bray curtis distance matrix
 dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
 
+# Making a data frame from the phyloseq object 
+dormOTU <- dorm1rarefied_OTU %>%
+  data.frame()
+
+# Need to transform so species are columns and samples are rows (for vegan)
+dormOTUtransform <- t(sqrt(dormOTU))
+dorm_bray <- vegdist(dormOTUtransform, method = "bray")
+
 # make a data frame from the sample_data
-sampledf <- data.frame(sample_data(dorm1rarefied))
+# sampledf <- data.frame(sample_data(dorm1rarefied))
 
 # Adonis test
-adonis(dorm_bray ~ site, data = sampledf)
+# adonis(dorm_bray ~ pre_post_thaw, data = sampledf)
 
-# Homogeneity of dispersion test
-beta <- betadisper(dorm_bray, sampledf$site)
+# Homogeneity of dispersion test for site
+beta <- betadisper(dorm_bray, dorm1rarefied_sam_data$site)
+print(beta)
+
+# Homogeneity of dispersion test for core
+beta_core <- betadisper(dorm_bray, dorm1rarefied_sam_data$core)
+print(beta_core)
+
+# Homogenity of dispersion test for pre post thaw 
+beta_pp <- betadisper(dorm_bray, dorm1rarefied_sam_data$pre_post_thaw)
+print(beta_pp)
+# Are these distances (dispersion/distance to the median) significant?
+
+# site 
 permutest(beta)
 
+# core 
+permutest(beta_core)
+
+# pre post thaw 
+permutest(beta_pp)
+
+# Tukey for site 
+tukey_beta <- TukeyHSD(beta)
+plot(tukey_beta) 
+print(tukey_beta)
+
+# Tukey for core 
+tukey_beta_core <- TukeyHSD(beta_core)
+print(tukey_beta_core)
+
+# Tukey for pre post thaw  # didn't report this in results yet because I am not sure if it's useful
+tukey_beta_pp <- TukeyHSD(beta_pp)
+print(tukey_beta_pp)
+
+#****************************************************************************
+# Making a data frame for permanova analysis
+datadorm <- data.frame(sample_data(dorm1rarefied)) 
+
+# site 
+perms <- with(datadorm, how(nperm = 1000, blocks = site))
+# trying this with core 
+perms_core <- with(datadorm, how(nperm = 1000, blocks = core))
+
+# pre post thaw? 
+perms_pp <- with(datadorm, how(nperm = 1000, blocks = pre_post_thaw))
+
+# Permanova assessing composition by site and pre-post thaw 
+sitethaw.pnova <- vegan::adonis2(dorm_bray ~ site + pre_post_thaw, data = datadorm)
+print(sitethaw.pnova)
+
+sitethaw.strata <- vegan::adonis2(dorm_bray ~ pre_post_thaw, permutations = perms, data = datadorm)
+print(sitethaw.strata)
+
+saveRDS(dorm1rarefied, "~/Desktop/dorm1.rds")
+saveRDS(dorm_bray, "~/Desktop/dormbray.rds")
 # Constrained ordination here 
 
 ## Alpha Diversity
@@ -191,6 +301,7 @@ for (i in 1:100) {
   evenness[ ,i] <- even
 }
 
+# Untouched code below from online 
 # Create a new dataframe to hold the means and standard deviations of richness estimates
 SampleID <- row.names(richness)
 mean <- apply(richness, 1, mean)
@@ -198,6 +309,7 @@ sd <- apply(richness, 1, sd)
 measure <- rep("Richness", nsamp)
 rich_stats <- data.frame(SampleID, mean, sd, measure)
 
+# Untouched code below from online 
 # Create a new dataframe to hold the means and standard deviations of evenness estimates
 SampleID <- row.names(evenness)
 mean <- apply(evenness, 1, mean)
@@ -223,3 +335,87 @@ ggplot(alphadiv, aes(x = site, y = mean, color = site, group = site, shape = sit
     axis.title.x = element_blank(),
     axis.title.y = element_blank()
   )
+
+#*******************************************************************
+# Creating a table of Simpson and Shannon diversity and running stats
+
+# Run diversity analysis
+shansimp <- estimate_richness(dorm1rarefied, measures = c("Simpson", "Shannon"))
+print(shansimp)
+
+# Export as a CSV
+# write.csv(shansimp,"~/Desktop/shansimp.csv")
+
+ssmeta <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "metadata_final_shansimp")
+
+# Visualize
+boxplot(shansimp)
+
+# Let's see if Shannon is normally distributed
+hist(ssmeta$Shannon, main = "Shannon index", xlab = "")
+shapiro.test(ssmeta$Shannon) # W = 0.87838, p-value = 0.002171 this is not normally distributed
+
+# Shannon by site
+kruskal.test(ssmeta$Shannon ~ site, data = ssmeta) # chi-squared = 13.765, df = 2, p-value = 0.001026
+dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
+
+# Shannon by pre thaw 
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
+# Shannon by pre- post-thaw by site 
+# CRREL
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
+
+# Farmers Loop 
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
+
+# Utqiagvik
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
+
+# Subsetting by site manually 
+crrel_ss <- subset(ssmeta,subset =  site == "CRREL")
+kruskal.test(crrel_ss$Shannon ~ pre_post_thaw, data = crrel_ss)
+
+#dunnTest(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) 
+
+# Let's see if Simpson is normally distributed
+hist(ssmeta$Simpson, main = "Simpson index", xlab = "")
+shapiro.test(shansimp$Simpson) # p-value = 1.541e-07, this is not normally distributed
+
+# Simpson by site 
+kruskal.test(ssmeta$Simpson ~ site, data = ssmeta) # chi-squared = 9.5593, df = 2, p-value = 0.008399
+dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
+
+# Using the base Kruskal test we find that it's the same as above with the FSA package Kruskal test 
+#stats::kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
+
+# Simpson by pre- post-thaw 
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, data = ssmeta) #chi-squared = 18.564, df = 1, p-value = 1.643e-05
+
+# Simpson by pre-post thaw by site 
+# CRREL
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
+
+# FL
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
+
+# Utqiagvik
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
+
+#**********************************************************************************
+
+#Alpha diversity take two (https://micca.readthedocs.io/en/latest/phyloseq.html)
+# Alpha diversity: plotting Shannon and Chao1
+plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
+
+# Plot Shannon diversity
+plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Shannon")) +
+  geom_boxplot()
+
+# Plot Simpson Diversity
+plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Simpson")) + 
+  geom_boxplot()
+
+# Make a boxplot of the number of OTUs and Shannon entropy 
+plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + geom_boxplot()
+
+

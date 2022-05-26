@@ -51,35 +51,37 @@ par(mfrow=c(1, 2)) # divide graph area in 2 columns
 respcpnumb <- merge(resp4copy,cpnumb) 
 
 # Okay let's run a Kruskall Wallis and then a dunn test (maybe) for cum resp and pre-thaw copy numbers
-kruskal.test(Cumulative_Respiration ~ copy_number_per_gsoil_PRE, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
-# cumulative respiration and copy number per g soil pre is not significant 
+kruskal.test(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+
 
 # Okay let's run a Kruskall Wallis for cum respiration and post thaw copy numbers
-kruskal.test(Cumulative_Respiration ~ copy_number_per_gsoil_POST, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589 SAME P VALUE?
+kruskal.test(copy_number_per_gsoil_POST ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589 SAME P VALUE?
 
 # FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ PRE THAW COPY NUMBER 
-resp_pre_corr <- cor.test(x = respcpnumb$Cumulative_Respiration, y = respcpnumb$copy_number_per_gsoil_PRE, method = "spearman")
+resp_pre_corr <- cor.test(x =respcpnumb$copy_number_per_gsoil_PRE, y = respcpnumb$Cumulative_Respiration, method = "spearman")
 print(resp_pre_corr)
 
 # Visualize here 
-ggplot(respcpnumb, aes(x = Cumulative_Respiration, y = copy_number_per_gsoil_PRE)) + 
+ggplot(respcpnumb, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration)) + 
   geom_point(aes(color = site)) +
-  scale_x_log10() +
-  scale_y_log10() +
+  #scale_x_log10() +
+  #scale_y_log10() +
   geom_smooth(method = "lm")
 
 # Hannah's code to visualize both pre and post as a response to respiration: 
 pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
-  ggplot(aes(x = Cumulative_Respiration, y = copy_number, color = Pre_post_copynumber, group = Pre_post_copynumber, shape = site)) + 
-           geom_point() + stat_smooth(method = "lm")
+  ggplot(aes(x = copy_number, y = Cumulative_Respiration, color = Pre_post_copynumber, group = Pre_post_copynumber, shape = site)) + 
+           geom_point() + stat_smooth(method = "lm") +
+            scale_x_log10() +
+            scale_y_log10()
   
 
 # NEXT LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
-resp_post_corr <- cor.test(x = respcpnumb$Cumulative_Respiration, y = respcpnumb$copy_number_per_gsoil_POST, method = "spearman")
+resp_post_corr <- cor.test(x = respcpnumb$copy_number_per_gsoil_POST, y = respcpnumb$Cumulative_Respiration, method = "spearman")
 print(resp_post_corr)
 
 # Visualize 
-ggplot(respcpnumb, aes(x = Cumulative_Respiration, y = copy_number_per_gsoil_POST)) + 
+ggplot(respcpnumb, aes(x =copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
   geom_point(aes(color = site)) +
   scale_x_log10() +
   scale_y_log10() +
@@ -157,6 +159,7 @@ ggplot(linearmodel_respcopypost, aes(x = copy_number_per_gsoil_POST, y = Cumulat
 
 # Make a QQ plot
 qqnorm(x = copynumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration, main = "Q-Q Plot")
+
 # Run the corr test 
 copyprecorr <- cor.test(x = copynumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration, method = "spearman") #p value = 0.6012, rho = 0.1146245
 print(copyprecorr)
