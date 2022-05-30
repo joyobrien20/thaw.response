@@ -30,6 +30,16 @@ phylum.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Phylum
 top5phyla = names(sort(phylum.sum, TRUE))[1:5]
 TP5 = prune_taxa((tax_table(dorm1rarefied)[, "Phylum"] %in% top5phyla), dorm1rarefied)
 
+# Obtain the top 5 class
+class.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Class"], sum, na.rm=TRUE)
+top5class = names(sort(class.sum, TRUE))[1:5]
+CL5 = prune_taxa((tax_table(dorm1rarefied)[, "Class"] %in% top5class), dorm1rarefied)
+
+# Visualize top class
+plot_bar(CL5, fill = "Class") #+
+  #geom_bar(aes(fill="Genus"), stat="identity", position="stack")+
+  #scale_fill_manual(values = c("#ff9999", "#ffcc99", "#ffff99", "66b2ff", "99ffcc"))
+                    
 # Visualize with a taxa barplot (Nate's script)
 plot_bar(TP5, fill = "Phylum") +
   geom_bar(aes(fill=Phylum), stat="identity", position="stack")+
