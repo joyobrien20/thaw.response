@@ -214,6 +214,7 @@ dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
 dormOTU <- dorm1rarefied_OTU %>%
   data.frame()
 
+write.csv(dormOTU,"~/Desktop/dormOTU.csv")
 # Need to transform so species are columns and samples are rows (for vegan)
 dormOTUtransform <- t(sqrt(dormOTU))
 dorm_bray <- vegdist(dormOTUtransform, method = "bray")

@@ -49,6 +49,15 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
   #scale_y_log10() +
   geom_smooth(method = "lm")
 
+# Making the plot even prettier 
+ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  xlab("Change in DOC (ppm)") +
+  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se=FALSE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
 # Performing Spearman rank correlations on TDN_post and respiration
 
 tdncorr <- cor.test(x = doctdn$TDN_diff, y = doctdn$Cumulative_Respiration, method = "spearman")
@@ -60,6 +69,17 @@ ggplot(doctdn, aes(x = TDN_diff, y = Cumulative_Respiration)) +
   #scale_x_log10() +
   #scale_y_log10()
   geom_smooth(method = "lm")
+
+
+# Making the plot prettier 
+ggplot(doctdn, aes(x = TDN_diff, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  xlab("Change in TDN (ppm)") +
+  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = FALSE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
 
 # This is the code that Hannah wrote to have the TDN_pre come in as dotted lines for comparison ##IF YOU ARE GOING TO USE THIS YOU NEED TO WORK THE PRE VALUES INTO THE FRAME YOU HAVE NOW 
 ggplot(respdoctdn, aes(x = TDN_post, y = Cumulative_Respiration)) + 

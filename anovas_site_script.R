@@ -56,6 +56,14 @@ dunnTest(DOC_post ~ site, data = doctdn, method = "bonferroni") # Check to see i
 #let's visualize DOC_diff content across site 
 boxplot(DOC_diff ~ site, data = doctdn_diff)
 
+# For thesis and pub: making the doc_diff boxplot prettier 
+
+doc <- ggplot(doctdn_diff, aes(x = site, y =DOC_diff)) + 
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  ylab("Change in DOC (ppm)") +
+  theme(text = element_text(size = 12))
 # Checking for normality with a Shapiro test for TDN diff 
 shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
 
@@ -72,6 +80,13 @@ dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
 # Now let's visualize with a boxplot
 boxplot(TDN_diff ~ site, data = doctdn_diff)
 
+# Making it better for pub and thesis 
+tdn <- ggplot(doctdn_diff, aes(x = site, y = TDN_diff)) + 
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  ylab("Change in TDN (ppm)") +
+  theme(text = element_text(size = 12))
 # Making pretty boxplots: # NEED TO MAKE THEM PRETTY FOR PUB AND THESIS, RIGHT NOW THEY ARE JUST PLACE HOLDERS IN THESIS 
 # DOC difference boxplot 
 
@@ -91,10 +106,14 @@ kruskal.test(Cumulative_Respiration ~ site, data = resp) # Kruskal-Wallis chi-sq
 # Now let's visualize witha boxplot 
 boxplot(Cumulative_Respiration ~ site, data = resp)
 
+cumresp <- ggplot(resp, aes(x = site, y = Cumulative_Respiration)) + 
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  theme(text = element_text(size = 12))
 # Let's run a dunn test for respiration and site 
 dunnTest(Cumulative_Respiration ~ site, data = resp, method ='bh') 
-
-
 
 # Need to do copy number pre and post thaw and maybe change in DOC or TDN? 
 
