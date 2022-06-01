@@ -17,6 +17,7 @@ library("dplyr")        # filter and reformat data frames
 library("tibble")       # Needed for converting column to row names
 library("vegan")        #Used for rarifying
 
+
 ## Read the data into R 
 seq_tab <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "seqtab_final_") # fill this in with the file path for your DADA2 seqtab output
 taxonomy <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "tax_final", na = c("","NA")) # fill this in with the tax_final file (DADA2 output but manipulated in Excel first)

@@ -122,6 +122,9 @@ summary(phpreaov)
 phpretukey<- TukeyHSD(phpreaov, conf.level = 0.95)
 print(phpretukey)
 
+tukey_cld_pre_ph <-multcompLetters4(phpreaov, phpretukey)
+print(tukey_cld_pre_ph)
+
 # $site
 #diff        lwr          upr     p adj
 #FL-CRREL        -0.155 -0.5992086  0.289208596 0.4216976
@@ -132,7 +135,7 @@ print(phpretukey)
 
 # pH post-thaw ANOVA 
 shapiro.test(ph_post$pH_post) # p-value = 0.05193 WHEW
-phpostaov <- aov(pH_post ~ site, data = ph_post)
+phpostaov <- kruskal.test(pH_post ~ site, data = ph_post)
 print(phpostaov)
 plot(phpretukey, las=1)
 summary(phpostaov)
@@ -162,6 +165,10 @@ ecpostaov <- aov(EC_post ~ site, data = EC_post)
 summary(ecpostaov)
 ECposttukey <- TukeyHSD(ecpostaov, conf.level = 0.95)
 print(ECposttukey)
+ 
+library(multcompView)
+tukey_cld <-multcompLetters4(ecpostaov, ECposttukey)
+print(tukey_cld)
 
 #Comparing pre and post thaw EC via ANOVA 
 ecboth <- aov(EC_pre ~ EC_post, data = EC_both)
@@ -169,19 +176,28 @@ summary (ecboth)
 ECbothtukey <- TukeyHSD(ecboth, conf.level = 0.95)
 print(ECposttukey)
 
+
 # Comparing % C across site 
-shapiro.test(TC_TN$`%C`) # p = 0.2355
-TCaov <- aov(`%C` ~ site, data = TC_TN)
+shapiro.test(TC_TN$C) # p = 0.2355
+TCaov <- aov(C ~ site, data = TC_TN)
 summary(TCaov)
 TCtukey <- TukeyHSD(TCaov, conf.level = 0.95)
 print(TCtukey)
 
+library(multcompView)
+tukey_tc_tld <-multcompLetters4(TCaov, TCtukey)
+print(tukey_tc_tld)
+
 # Comparing % N across site 
-shapiro.test(TC_TN$`%N`) # p = 0. 3077 
-TNaov <- aov(`%N` ~ site, data = TC_TN)
+shapiro.test(TC_TN$N) # p = 0. 3077 
+TNaov <- aov(N ~ site, data = TC_TN)
 summary(TNaov)
 TNtukey <- TukeyHSD(TNaov, conf.level = 0.95)
 print(TNtukey)
+
+library(multcompView)
+tukey_tn <-multcompLetters4(TNaov, TNtukey)
+print(tukey_tn)
 
 # Now we are going to look at GWC across sites pre and post thaw 
 
