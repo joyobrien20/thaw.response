@@ -54,7 +54,7 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
   geom_point(aes(color = site), size = 2.5) +
   theme_classic() +
   xlab("Change in DOC (ppm)") +
-  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   geom_smooth(method = "lm", color = "dark gray", se=FALSE) +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title
@@ -76,7 +76,7 @@ ggplot(doctdn, aes(x = TDN_diff, y = Cumulative_Respiration)) +
   geom_point(aes(color = site), size = 2.5) +
   theme_classic() +
   xlab("Change in TDN (ppm)") +
-  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   geom_smooth(method = "lm", color = "dark gray", se = FALSE) +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title

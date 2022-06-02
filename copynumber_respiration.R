@@ -52,7 +52,11 @@ respcpnumb <- merge(resp4copy,cpnumb)
 
 # Okay let's run a Kruskall Wallis and then a dunn test (maybe) for cum resp and pre-thaw copy numbers
 kruskal.test(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+kruskal.test(copy_number_per_gsoil_PRE ~ site, data = cpnumb) # not significant p = 0.2062
 
+kruskal.test(copy_number_per_gsoil_POST ~ site, data = cpnumb) #significant p-value = 0.03
+
+kruskal.test(copy_number_per_gsoil_PRE ~ copy_number_per_gsoil_POST, data = cpnumb) # p-value = 0.4599
 
 # Okay let's run a Kruskall Wallis for cum respiration and post thaw copy numbers
 kruskal.test(copy_number_per_gsoil_POST ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589 SAME P VALUE?
@@ -70,11 +74,19 @@ ggplot(respcpnumb, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration
 
 # Hannah's code to visualize both pre and post as a response to respiration: 
 pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
-  ggplot(aes(x = copy_number, y = Cumulative_Respiration, color = Pre_post_copynumber, group = Pre_post_copynumber, shape = site)) + 
-           geom_point() + stat_smooth(method = "lm") +
+  ggplot(aes(x = copy_number, y = Cumulative_Respiration, shape = Pre_post_copynumber, group = Pre_post_copynumber, color = site)) + 
+           geom_point(size = 2.5) + stat_smooth(method = "lm", color = "dark grey") +
             scale_x_log10() +
-            scale_y_log10()
-  
+            scale_y_log10() +
+            theme_classic() +
+            xlab("log10 Copy number g-1 soil") +
+            ylab("log10 Cumulative respiration (µg C-CO2 g-1 dry soil)") +
+            theme(text = element_text(size = 12)) +
+            scale_shape_discrete("Copy number type", labels = c("Post-thaw", "Pre-thaw")) +
+            scale_color_discrete("Site")
+
+# guide = guide_legend(reverse = TRUE)
+
 
 # NEXT LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
 resp_post_corr <- cor.test(x = respcpnumb$copy_number_per_gsoil_POST, y = respcpnumb$Cumulative_Respiration, method = "spearman")
@@ -87,6 +99,18 @@ ggplot(respcpnumb, aes(x =copy_number_per_gsoil_POST, y = Cumulative_Respiration
   scale_y_log10() +
   geom_smooth(method = "lm")
 
+# Cleaning up the figure for publication 
+
+ggplot(respcpnumb, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  scale_x_log10() +
+  scale_y_log10() +
+  xlab("log10 Post-thaw copy number g-1 soil") +
+  ylab("log10 Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se=TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site")
 
 # NOW WE WILL RUN KRUSKALL WALLIS ON BACTERIAL ABUMDANCE PRE THAW BY SITE 
 kruskal.test(copy_number_per_gsoil_PRE ~ site, data = respcpnumb) # chi-squared = 3.1581, df = 2, p-value = 0.2062

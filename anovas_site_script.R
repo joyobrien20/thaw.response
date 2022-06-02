@@ -106,11 +106,11 @@ kruskal.test(Cumulative_Respiration ~ site, data = resp) # Kruskal-Wallis chi-sq
 # Now let's visualize witha boxplot 
 boxplot(Cumulative_Respiration ~ site, data = resp)
 
-cumresp <- ggplot(resp, aes(x = site, y = Cumulative_Respiration)) + 
+ggplot(resp, aes(x = site, y = Cumulative_Respiration)) + 
   geom_boxplot() +
   theme_classic() +
   xlab("Site") +
-  ylab("Cumulative Respiration (mg CO2-C/g dry weight soil)") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   theme(text = element_text(size = 12))
 # Let's run a dunn test for respiration and site 
 dunnTest(Cumulative_Respiration ~ site, data = resp, method ='bh') 
