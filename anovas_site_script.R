@@ -26,7 +26,10 @@ library(dplyr)
 library(FSA) #installed for the dunntest
 library(multcompView) # used for the tukey test
 library(ggplot2) # to make pretty figs 
-
+library(rstatix) 
+library(multcompView)
+library(rcompanion) # attempted to use this to get the significance codes from KW test
+library(agricolae) # used to get the significance codes from the KW test
 # Read in the data 
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
 resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
@@ -51,7 +54,7 @@ kruskal.test(DOC_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared =
 # The difference in DOC pre and post thaw is not signficant across sites 
 
 # May want to do a pairwise wilcox test for this ? http://www.sthda.com/english/wiki/kruskal-wallis-test-in-r
-dunnTest(DOC_post ~ site, data = doctdn, method = "bonferroni") # Check to see if the method is necessary? If it needs to be changed 
+dunnTest(DOC_post ~ site, data = doctdn_diff, method = "bonferroni") # Check to see if the method is necessary? If it needs to be changed 
 
 #let's visualize DOC_diff content across site 
 boxplot(DOC_diff ~ site, data = doctdn_diff)
@@ -68,14 +71,19 @@ doc <- ggplot(doctdn_diff, aes(x = site, y =DOC_diff)) +
 shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
 
 # Therefore, we will run a Kruskall-Wallis test 
-kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
+kruskal_tdn<- kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
 
+kruskal(doctdn_diff$TDN_diff, doctdn_diff$site, group=TRUE, p.adj="bonferroni")$groups # use this to get the letter significance codes
 # The difference in TDN pre and post thaw is statistically significant across sites
 
 # Since the p-value of the Kruskal for TDN_diff is significant, we need to run a dunntest. 
 
 # Now let's look at a dunn test
-dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
+tdndunn <- dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
+k_test <- k$doctdn_diff
+cldList(comparison = k_test$Comparison,
+        p.value    = PT$P.adj,
+        threshold  = 0.05)
 
 # Now let's visualize with a boxplot
 boxplot(TDN_diff ~ site, data = doctdn_diff)
@@ -101,6 +109,7 @@ shapiro.test(resp$Cumulative_Respiration) #this is not normally distributed W = 
 
 # Because of that, lets look at a Kruskal test
 kruskal.test(Cumulative_Respiration ~ site, data = resp) # Kruskal-Wallis chi-squared = 16.805, df = 2, p-value = 0.0002243
+kruskal(resp$Cumulative_Respiration, resp$site, group=TRUE, p.adj="bonferroni")$groups # use this to get significance codes for KW test
 # CUMMULATIVE RESPIRATION IS STATISTICALLY SIGNIFICANT ACROSS SITES
 
 # Now let's visualize witha boxplot 

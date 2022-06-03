@@ -20,7 +20,9 @@ library(readr)
 # devtools::install_github("leffj/mctoolsr")
 
 # RESPONSE RATIO ANALYSIS
-
+# Make a dataframe from the phyloseq object
+dormOTU <- dorm1rarefied_OTU %>%
+  data.frame()
 # Read in file (load OTU table) 
 thaw_response <- dormOTU
 # We are going to scale each OTU count up by 0.01 so that 0 becomes 0.01 and the relatoionship stays the same
@@ -65,7 +67,7 @@ err = ICu-RR
 
 # Significance
 Sig = ICl*ICu
-Sig_adjust <- p.adjust(Sig, method = "fdh") # only 1 asv is significant ?? 
+Sig_adjust <- p.adjust(Sig, method = "fdr") # only 1 asv is significant ?? 
 
 # Creating data frame w/ 3 coloums (RR, err, Sig) 
 res = as.data.frame(cbind(RR,err,Sig_adjust))
@@ -92,10 +94,10 @@ write_csv(tax_response,"~/Desktop/tax_response.csv")
 # Filter tax response so that we don't show anything that is not significant 
 
 # Visualizing the RR data
-ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Phylum)) + 
+ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Class)) + 
   geom_pointrange(aes(ymin = RR - err, ymax = RR + err)) +
   geom_hline(yintercept = 0, linetype = 2) +
-  facet_wrap(~Phylum,scales = "free_x") +
+  facet_wrap(~Class,scales = "free_x") +
   theme_bw()
   
 

@@ -191,18 +191,20 @@ dorm_nmds <- ordinate(
 )
 print(dorm_nmds)
 summary(dorm_nmds)
+
 plot_ordination(
   physeq = dorm1rarefied,
   ordination = dorm_nmds,
   color = "site",
   shape = "pre_post_thaw",
-  title = "NMDS of Permafrost Bacterial Communities"
-) + 
-  scale_color_manual(values = c("#a65628", "red", "#ffae19",
-                                "#4daf4a", "#1919ff", "darkorchid3", "magenta")
-  ) +
+  #title = "NMDS of Permafrost Bacterial Communities"
+) +
   geom_point(aes(color = site), alpha = 0.7, size = 4) +
-  geom_point(colour = "grey90", size = 1.5)
+  geom_point(colour = "grey90", size = 1.5)+
+  theme_classic() +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") +
+  scale_shape_discrete("Treatment")
 
 print(dorm_nmds)
   
@@ -372,9 +374,12 @@ dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
 
 # Shannon by pre thaw 
 kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups # to get significance codes
+
 # Shannon by pre- post-thaw by site 
 # CRREL
 kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, site == "CRREL", group=TRUE, p.adj="bonferroni")$groups
 
 # Farmers Loop 
 kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
@@ -418,12 +423,25 @@ kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta)
 # Alpha diversity: plotting Shannon and Chao1
 plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
 
-# Plot Shannon diversity
-plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Shannon")) +
-  geom_boxplot()
+# Plot Shannon diversity/making the plot prettier
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
+
 
 # Plot Simpson Diversity
-plot_richness(dorm1rarefied, x = "pre_post_thaw", color = "site", measures = c("Simpson")) + 
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
+
+
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) + 
   geom_boxplot()
 
 # Make a boxplot of the number of OTUs and Shannon entropy 
