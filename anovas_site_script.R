@@ -43,7 +43,7 @@ EC_both <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "E
 GWC_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "GWC_both")
 texture <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Texture")
 doctdn_diff <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_diff")
-
+resp_tctn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN")
 # FIRST: RUNNING STATS ON THE DIFFERENCE IN DOC AND TDN PRE AND POST THAW
 
 # Checking for normality with a Shapiro test for DOC diff
@@ -100,6 +100,8 @@ tdn <- ggplot(doctdn_diff, aes(x = site, y = TDN_diff)) +
 
 geom_boxplot(doctdn_diff)
 
+# Comparing TDN and DOC together 
+kruskal.test(DOC_diff ~ TDN_diff, data = doctdn_diff)
 #**********************************************************************
 
 # NOW TRANSITIONING TO CUMULATIVE RESPIRATION
@@ -255,5 +257,22 @@ shapiro.test(texture$Silt) #p-value = 0.1183
 siltaov <- aov(Silt ~ site, data = texture)
 summary(siltaov) # p-value = 0185, not statistically signif 
 
+# Looking at C content and respiration # having a hard time with this -the tukey test
+shapiro_test(resp_tctn$Cumulative_Respiration) # p-value = 0.370
+shapiro_test(resp_tctn$C) # p-value = 0.228
+shapiro_test(resp_tctn$N) # p-value = 0.293
 
+resp_c_aov <- aov(C ~ Cumulative_Respiration + site, data = resp_tctn)
+summary(resp_c_aov)
+C_resptukey <- TukeyHSD(resp_c_aov, conf.level = 0.95)
+print(C_resptukey)
 
+# Looking at the relationship between C and Cumulative Resp 
+resp_c_corr <- cor.test(x =resp_tctn$C, y = resp_tctn$Cumulative_Respiration, method = "spearman")
+print(resp_c_corr)
+
+ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  #scale_x_log10() +
+  #scale_y_log10() +
+  geom_smooth(method = "lm")
