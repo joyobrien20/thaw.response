@@ -71,7 +71,7 @@ doc <- ggplot(doctdn_diff, aes(x = site, y =DOC_diff)) +
 shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
 
 # Therefore, we will run a Kruskall-Wallis test 
-kruskal_tdn<- kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
+kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
 
 kruskal(doctdn_diff$TDN_diff, doctdn_diff$site, group=TRUE, p.adj="bonferroni")$groups # use this to get the letter significance codes
 # The difference in TDN pre and post thaw is statistically significant across sites
@@ -80,6 +80,7 @@ kruskal(doctdn_diff$TDN_diff, doctdn_diff$site, group=TRUE, p.adj="bonferroni")$
 
 # Now let's look at a dunn test
 tdndunn <- dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
+print(tdndunn)
 k_test <- k$doctdn_diff
 cldList(comparison = k_test$Comparison,
         p.value    = PT$P.adj,
@@ -258,21 +259,83 @@ siltaov <- aov(Silt ~ site, data = texture)
 summary(siltaov) # p-value = 0185, not statistically signif 
 
 # Looking at C content and respiration # having a hard time with this -the tukey test
-shapiro_test(resp_tctn$Cumulative_Respiration) # p-value = 0.370
-shapiro_test(resp_tctn$C) # p-value = 0.228
-shapiro_test(resp_tctn$N) # p-value = 0.293
+shapiro.test(resp_tctn$Cumulative_Respiration) # p-value = 0.370
+shapiro.test(resp_tctn$C) # p-value = 0.228
+shapiro.test(resp_tctn$N) # p-value = 0.293
 
-resp_c_aov <- aov(C ~ Cumulative_Respiration + site, data = resp_tctn)
+resp_c_aov <- aov(C ~ Cumulative_Respiration, data = resp_tctn)
 summary(resp_c_aov)
-C_resptukey <- TukeyHSD(resp_c_aov, conf.level = 0.95)
-print(C_resptukey)
+Cresptukey <- TukeyHSD(resp_c_aov)
+print(Cresptukey)
 
 # Looking at the relationship between C and Cumulative Resp 
 resp_c_corr <- cor.test(x =resp_tctn$C, y = resp_tctn$Cumulative_Respiration, method = "spearman")
 print(resp_c_corr)
 
+# Making a pretty plot
 ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) + 
   geom_point(aes(color = site)) +
   #scale_x_log10() +
   #scale_y_log10() +
   geom_smooth(method = "lm")
+
+ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  xlab("% C") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
+
+# Looking at the relationship between N and cumulative respiration 
+resp_n_aov <- aov(N ~ site, data = resp_tctn)
+summary(resp_n_aov)
+N_resptukey <- TukeyHSD(resp_n_aov)
+print(N_resptukey)
+
+# Looking at the relationship between C and Cumulative Resp 
+resp_n_corr <- cor.test(x =resp_tctn$N, y = resp_tctn$Cumulative_Respiration, method = "spearman")
+print(resp_n_corr)
+
+# Making a pretty plot
+ggplot(resp_tctn, aes(x = N, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  xlab("% N") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
+
+# Trying GLM since this data is normally distributed 
+# C
+linearmodel_Cresp <- glm(C ~ Cumulative_Respiration, family=gaussian, data = resp_tctn)
+print(linearmodel_Cresp)
+summary(linearmodel_Cresp)
+
+ggplot(linearmodel_Cresp, aes(x = C, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = linearmodel_Cresp[["data"]][["site"]]), size = 2.5) +
+  theme_classic() +
+  xlab("% C") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
+
+# N
+linearmodel_Nresp <- glm(N ~ Cumulative_Respiration, family=gaussian, data = resp_tctn)
+summary(linearmodel_Nresp)
+
+ggplot(linearmodel_Nresp, aes(x = N, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = linearmodel_Cresp[["data"]][["site"]]), size = 2.5) +
+  theme_classic() +
+  xlab("% N") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
+
+
+
+

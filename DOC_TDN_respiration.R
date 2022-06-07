@@ -34,6 +34,7 @@ resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "
 
 # Make a QQ plot 
 qqnorm(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, main = "Q-Q Plot")
+shapiro.test(doctdn$DOC_diff)
 
 # Trying a correlation test for DOC_diff and respiration  
 doccorr <- cor.test(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, method = "spearman") # p-value = 0.2096, rho = 0.2652174
@@ -55,7 +56,7 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
   theme_classic() +
   xlab("Change in DOC (ppm)") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
-  geom_smooth(method = "lm", color = "dark gray", se=FALSE) +
+  geom_smooth(method = "lm", color = "dark gray", se=TRUE) +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title
 # Performing Spearman rank correlations on TDN_post and respiration
@@ -77,7 +78,7 @@ ggplot(doctdn, aes(x = TDN_diff, y = Cumulative_Respiration)) +
   theme_classic() +
   xlab("Change in TDN (ppm)") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
-  geom_smooth(method = "lm", color = "dark gray", se = FALSE) +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title
 

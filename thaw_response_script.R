@@ -14,6 +14,8 @@ library(phyloseq)
 library(readxl)
 library(biomformat)
 library(readr)
+library(ARPobservation) #checking the response ratio with another package
+library(SingleCaseES) # checking the response ratio with another package pt. 2
 
 # Installing and using mctools, it wasn't as straight forward as install.packages
 # install.packages("devtools")
@@ -47,7 +49,7 @@ sd2 = apply(thaw_response[,c(13:23,25:29)],1,sd,na.rm = TRUE)# treatment #
 num1 = apply(ToF[,c(1:12,24,30:31)],1,sum,na.rm = TRUE); #Control#
 num2 = apply(ToF[,c(13:23,25:29)],1,sum,na.rm = TRUE) # Treatment #
 
-# Response ration calculations
+# Response ratio calculations
 # Sample variance
 v1 = sd1^2/(ave1^2*num1); # Control #
 v2 = sd2^2/(ave2^2*num2) # treatment #
@@ -57,21 +59,38 @@ sqv = sqrt(v1+v2)
 
 # RR = Response ratio
 RR = log(ave2/ave1)
+ 
+rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
+  # I am going to move forward with RR (cited and vetted)
+
+ 
+# logRespRatio(aves, phase = sqv, base_level = 0.01)
 
 # Confidence interval
-ICl = RR-1.96*sqv
-ICu = RR+1.96*sqv
+
+ICl_R = RR-1.96*sqv
+ICu_R = RR+1.96*sqv
+
+ICl_r = rr-1.96*sqv
+ICu_r = rr+1.96*sqv
 
 # Error 
-err = ICu-RR
+err_R = ICu-RR
+err_r = ICu-rr
 
 # Significance
-Sig = ICl*ICu
-Sig_adjust <- p.adjust(Sig, method = "fdr") # only 1 asv is significant ?? 
+Sig_R = ICl_R*ICu_R
+Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") # only 1 asv is significant ?? 
+
+Sig_r = ICl_r*ICu_r
+Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
 
 # Creating data frame w/ 3 coloums (RR, err, Sig) 
-res = as.data.frame(cbind(RR,err,Sig_adjust))
+R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
+r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
 
+R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
+r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
 # Create a new column from row names 
 res$ID <- rownames(res)
 
