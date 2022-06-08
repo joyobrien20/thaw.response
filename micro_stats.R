@@ -21,8 +21,7 @@ library("colorspace")
 library("ggpubr")
 library("readxl")
 library("FSA")
-
-
+library("agricolae") # used to get significance codes 
 # Looking at the phyloseq object
 
 # Obtain the top 5 phyla
@@ -101,7 +100,8 @@ TP5_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top5phyla), posts
 
 # Visualize the top 5 phyla in post-thaw samples
 plot_bar(TP5_post, x = "sample_ID", fill = "Phylum") +
-  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack")
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
+  theme_classic()
 #************************************************************************************
 
 # Working with distance matrices 
@@ -359,8 +359,13 @@ print(shansimp)
 # Export as a CSV
 # write.csv(shansimp,"~/Desktop/shansimp.csv")
 
+# Reading all of the sites and samples and their shannon and simpson values into R
 ssmeta <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "metadata_final_shansimp")
 
+# Reading each site in individually to get significance codes pre and post thaw by site 
+sscrrel <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_crrel")
+ssfl <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_fl")
+ssut <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_ut")
 # Visualize
 boxplot(shansimp)
 
@@ -368,8 +373,37 @@ boxplot(shansimp)
 hist(ssmeta$Shannon, main = "Shannon index", xlab = "")
 shapiro.test(ssmeta$Shannon) # W = 0.87838, p-value = 0.002171 this is not normally distributed
 
+# Testing for each site 
+shapiro.test(sscrrel$Shannon) # p = 0.2624 normally distributed, use anova 
+shapiro.test(ssfl$Shannon) # p = 0.2112 normally distributed, use anova 
+shapiro.test(ssut$Shannon) # p = 0.007 not normally distributed, use kruskal 
+
+# Shannon pre-post-thaw by site 
+# CRREL
+crrelaov <- aov(Shannon ~ pre_post_thaw, data = sscrrel)
+summary(crrelaov)
+crreltukey <- TukeyHSD(crrelaov, conf.level = 0.95)
+print(crreltukey)
+
+library(multcompView)
+tukey_crrel <-multcompLetters4(crrelaov, crreltukey)
+print(tukey_crrel)
+# FL
+
+flaov <- aov(Shannon ~ pre_post_thaw, data = ssfl)
+summary(flaov)
+fltukey <- TukeyHSD(flaov, conf.level = 0.95)
+print(fltukey)
+
+tukey_fl <-multcompLetters4(flaov, fltukey)
+print(tukey_fl)
+# Utqiagvik 
+kruskal.test(ssut$Shannon ~ pre_post_thaw, data = ssut)
+kruskal(ssut$Shannon, ssut$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+
 # Shannon by site
-kruskal.test(ssmeta$Shannon ~ site, data = ssmeta) # chi-squared = 13.765, df = 2, p-value = 0.001026
+kruskal.test(ssmeta$Shannon ~ site, data = ssmeta)# chi-squared = 13.765, df = 2, p-value = 0.001026
+kruskal(ssmeta$Shannon, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups #using this to get the letter significance codes 
 dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
 
 # Shannon by pre thaw 
@@ -379,7 +413,7 @@ kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$gr
 # Shannon by pre- post-thaw by site 
 # CRREL
 kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
-kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, site == "CRREL", group=TRUE, p.adj="bonferroni")$groups
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, site == "CRREL", group=TRUE, p.adj="bonferroni") #$groups
 
 # Farmers Loop 
 kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
@@ -392,20 +426,44 @@ crrel_ss <- subset(ssmeta,subset =  site == "CRREL")
 kruskal.test(crrel_ss$Shannon ~ pre_post_thaw, data = crrel_ss)
 
 #dunnTest(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) 
-
+#**********************************************************************************
 # Let's see if Simpson is normally distributed
 hist(ssmeta$Simpson, main = "Simpson index", xlab = "")
 shapiro.test(shansimp$Simpson) # p-value = 1.541e-07, this is not normally distributed
 
+# Checking to see if simpson is normally distributed when we work with each site individually 
+
+shapiro.test(sscrrel$Simpson) # p = 0.01377 # use kruskal to evaluate 
+shapiro.test(ssfl$Simpson) # p = 0.02356 # use kruskal
+shapiro.test(ssut$Simpson) # p = 0.000399 not normally distributed, use kruskal 
+
+# Simpson pre post thaw by site (obtaining the significance codes)
+
+# CRREL
+kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel)
+kruskal(sscrrel$Simpson, sscrrel$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+# FL
+kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl)
+kruskal(ssfl$Simpson, ssfl$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+# Utqiagvik 
+kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut)
+kruskal(ssut$Simpson, ssut$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
 # Simpson by site 
 kruskal.test(ssmeta$Simpson ~ site, data = ssmeta) # chi-squared = 9.5593, df = 2, p-value = 0.008399
 dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
 
 # Using the base Kruskal test we find that it's the same as above with the FSA package Kruskal test 
 #stats::kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
+# Checking to see if Simpson is normally distributed
+shapiro.test(ssmeta$Simpson) # this is not normally distributed, p = 1.541e-07
+
+# Simpson by site 
+kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
+kruskal(ssmeta$Simpson, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups
 
 # Simpson by pre- post-thaw 
 kruskal.test(ssmeta$Simpson ~ pre_post_thaw, data = ssmeta) #chi-squared = 18.564, df = 1, p-value = 1.643e-05
+kruskal(ssmeta$Simpson, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
 
 # Simpson by pre-post thaw by site 
 # CRREL
