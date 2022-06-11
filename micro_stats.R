@@ -216,7 +216,7 @@ dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
 dormOTU <- dorm1rarefied_OTU %>%
   data.frame()
 
-write.csv(dormOTU,"~/Desktop/dormOTU.csv")
+# write.csv(dormOTU,"~/Desktop/dormOTU.csv")
 # Need to transform so species are columns and samples are rows (for vegan)
 dormOTUtransform <- t(sqrt(dormOTU))
 dorm_bray <- vegdist(dormOTUtransform, method = "bray")
@@ -228,8 +228,10 @@ dorm_bray <- vegdist(dormOTUtransform, method = "bray")
 # adonis(dorm_bray ~ pre_post_thaw, data = sampledf)
 
 # Homogeneity of dispersion test for site
-beta <- betadisper(dorm_bray, dorm1rarefied_sam_data$site)
-print(beta)
+beta <- betadisper(dorm_bray, dorm1rarefied_sam_data$site) # testing the dispersion between groups (sites)
+print(beta) # dispersion is how scattered the points are
+
+adonis2(dorm_bray ~ site, data=datadorm)
 
 # Homogeneity of dispersion test for core
 beta_core <- betadisper(dorm_bray, dorm1rarefied_sam_data$core)
@@ -244,7 +246,7 @@ print(beta_pp)
 permutest(beta)
 
 # core 
-permutest(beta_core)
+# permutest(beta_core)
 
 # pre post thaw 
 permutest(beta_pp)
@@ -255,10 +257,10 @@ plot(tukey_beta)
 print(tukey_beta)
 
 # Tukey for core 
-tukey_beta_core <- TukeyHSD(beta_core)
-print(tukey_beta_core)
+# tukey_beta_core <- TukeyHSD(beta_core)
+# print(tukey_beta_core)
 
-# Tukey for pre post thaw  # didn't report this in results yet because I am not sure if it's useful
+# Tukey for pre post thaw  # not necessary since it wasnt significant
 tukey_beta_pp <- TukeyHSD(beta_pp)
 print(tukey_beta_pp)
 
@@ -269,7 +271,7 @@ datadorm <- data.frame(sample_data(dorm1rarefied))
 # site 
 perms <- with(datadorm, how(nperm = 1000, blocks = site))
 # trying this with core 
-perms_core <- with(datadorm, how(nperm = 1000, blocks = core))
+# perms_core <- with(datadorm, how(nperm = 1000, blocks = core))
 
 # pre post thaw? 
 perms_pp <- with(datadorm, how(nperm = 1000, blocks = pre_post_thaw))
@@ -366,6 +368,7 @@ ssmeta <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "metadata_final
 sscrrel <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_crrel")
 ssfl <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_fl")
 ssut <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "shansimp_ut")
+
 # Visualize
 boxplot(shansimp)
 
@@ -460,7 +463,7 @@ shapiro.test(ssmeta$Simpson) # this is not normally distributed, p = 1.541e-07
 # Simpson by site 
 kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
 kruskal(ssmeta$Simpson, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups
-
+dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
 # Simpson by pre- post-thaw 
 kruskal.test(ssmeta$Simpson ~ pre_post_thaw, data = ssmeta) #chi-squared = 18.564, df = 1, p-value = 1.643e-05
 kruskal(ssmeta$Simpson, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
@@ -483,7 +486,7 @@ plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
 
 # Plot Shannon diversity/making the plot prettier
 plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
-  geom_boxplot() +
+  geom_boxplot(aes(x = reorder(pre_post_thaw))) + # need to reorder so that pre comes before post 
   theme_classic() +
   xlab("Site") +
   theme(text = element_text(size =12)) +

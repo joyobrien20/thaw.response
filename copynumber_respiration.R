@@ -55,7 +55,7 @@ kruskal.test(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, data = respcpnu
 kruskal.test(copy_number_per_gsoil_PRE ~ site, data = cpnumb) # not significant p = 0.2062
 
 kruskal.test(copy_number_per_gsoil_POST ~ site, data = cpnumb) #significant p-value = 0.03
-
+dunn_test(copy_number_per_gsoil_POST ~ site, data = cpnumb)
 kruskal.test(copy_number_per_gsoil_PRE ~ copy_number_per_gsoil_POST, data = cpnumb) # p-value = 0.4599
 
 # Okay let's run a Kruskall Wallis for cum respiration and post thaw copy numbers
@@ -72,18 +72,20 @@ ggplot(respcpnumb, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration
   #scale_y_log10() +
   geom_smooth(method = "lm")
 
+respcpnumb1 <- factor(respcpnumb, levels = rev(levels(respcpnumb)))
 # Hannah's code to visualize both pre and post as a response to respiration: 
 pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
-  ggplot(aes(x = copy_number, y = Cumulative_Respiration, shape = Pre_post_copynumber, group = Pre_post_copynumber, color = site)) + 
-           geom_point(size = 2.5) + stat_smooth(method = "lm", color = "dark gray") +
+  ggplot(aes(respcpnumb1, x = copy_number, y = Cumulative_Respiration, shape = Pre_post_copynumber, group = Pre_post_copynumber, color = site)) + 
+           geom_point(size = 2.5) + 
+  geom_smooth(method = "lm", se = TRUE, color = "dark gray") +
             scale_x_log10() +
-            scale_y_log10() +
+            #scale_y_log10() +
             theme_classic() +
             xlab("log10 Copy number g-1 soil") +
             ylab("log10 Cumulative respiration (µg C-CO2 g-1 dry soil)") +
             theme(text = element_text(size = 12)) +
             scale_shape_discrete("Copy number type", labels = c("Post-thaw", "Pre-thaw")) + #this line changes the name of the shape but doesnt take the data with it 
-            scale_color_discrete("Site") +
+            scale_color_discrete("Site")
             # geom_smooth(aes(color = "pre_post_thaw")) trying to change the color of the regression lines
 
 # guide = guide_legend(reverse = TRUE)

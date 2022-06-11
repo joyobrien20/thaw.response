@@ -75,7 +75,7 @@ ICl_r = rr-1.96*sqv
 ICu_r = rr+1.96*sqv
 
 # Error 
-err_R = ICu-RR
+err_R = ICu_R-RR
 err_r = ICu-rr
 
 # Significance

@@ -30,6 +30,8 @@ library(rstatix)
 library(multcompView)
 library(rcompanion) # attempted to use this to get the significance codes from KW test
 library(agricolae) # used to get the significance codes from the KW test
+install.packages("lm.beta")
+library(lm.beta)
 # Read in the data 
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
 resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
@@ -242,6 +244,13 @@ shapiro.test(GWC_both$GWC_post) # p-value = 0.4414
 GWC_postaov <- aov(GWC_post~ site, data = GWC_both)
 summary(GWC_postaov) 
 
+# Comparing pre and post thaw
+GWCchange <- aov(GWC_pre ~ GWC_post, data = GWC_both)
+summary(GWCchange)
+gwctukey <- tukey_hsd(GWCchange)
+print(GWCtukey)
+
+
 # Anova on percent sand, silt, clay 
 # Clay
 shapiro.test(texture$Clay) #p-value = 0.2864
@@ -310,12 +319,15 @@ ggplot(resp_tctn, aes(x = N, y = Cumulative_Respiration)) +
 
 # Trying GLM since this data is normally distributed 
 # C
-linearmodel_Cresp <- glm(C ~ Cumulative_Respiration, family=gaussian, data = resp_tctn)
+
+linearmodel_Cresp <- lm(Cumulative_Respiration ~ C, data = resp_tctn)
+
 print(linearmodel_Cresp)
 summary(linearmodel_Cresp)
+# cor.test(resp_tctn$C, resp_tctn$Cumulative_Respiration, method = "pearson")
 
 ggplot(linearmodel_Cresp, aes(x = C, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = linearmodel_Cresp[["data"]][["site"]]), size = 2.5) +
+  geom_point(aes(color = site, size = 2.5)) +
   theme_classic() +
   xlab("% C") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
@@ -324,8 +336,15 @@ ggplot(linearmodel_Cresp, aes(x = C, y = Cumulative_Respiration)) +
   scale_color_discrete("Site") #changing the name of the legend title
 
 # N
-linearmodel_Nresp <- glm(N ~ Cumulative_Respiration, family=gaussian, data = resp_tctn)
+linearmodel_Nresp <- lm(Cumulative_Respiration ~ N, data = resp_tctn)
 summary(linearmodel_Nresp)
+print(linearmodel_Nresp)
+lm.beta(linearmodel_Nresp)
+
+
+shapiro.test(resp_tctn$N)
+Nanova <- aov(N ~ Cumulative_Respiration, data = resp_tctn)
+summary(Nanova)
 
 ggplot(linearmodel_Nresp, aes(x = N, y = Cumulative_Respiration)) + 
   geom_point(aes(color = linearmodel_Cresp[["data"]][["site"]]), size = 2.5) +

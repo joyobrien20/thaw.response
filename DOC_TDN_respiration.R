@@ -56,7 +56,7 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
   theme_classic() +
   xlab("Change in DOC (ppm)") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
-  geom_smooth(method = "lm", color = "dark gray", se=TRUE) +
+  geom_smooth(method = "lm", color = "dark gray", se=TRUE, linetype = "dashed") +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title
 # Performing Spearman rank correlations on TDN_post and respiration
