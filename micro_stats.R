@@ -24,11 +24,22 @@ library("FSA")
 library("agricolae") # used to get significance codes 
 # Looking at the phyloseq object
 
+shannon <- read_excel("~/Desktop/shan_simp.xlsx", sheet = "shannon")
+
 # Obtain the top 5 phyla
 phylum.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Phylum"], sum, na.rm=TRUE)
 top5phyla = names(sort(phylum.sum, TRUE))[1:5]
 TP5 = prune_taxa((tax_table(dorm1rarefied)[, "Phylum"] %in% top5phyla), dorm1rarefied)
 
+# Obtain top 10 phyla 
+top10phyla <- names(sort(phylum.sum, TRUE))[1:10]
+TP10 <- prune_taxa((tax_table(dorm1rarefied)[, "Phylum"] %in% top10phyla), dorm1rarefied)
+
+# Visualize 
+plot_bar(TP10, fill = "Phylum") +
+  geom_bar(aes(fill=Phylum), stat="identity", position="stack") +
+  theme_classic() +
+  
 # Obtain the top 5 class
 class.sum = tapply(taxa_sums(dorm1rarefied), tax_table(dorm1rarefied)[, "Class"], sum, na.rm=TRUE)
 top5class = names(sort(class.sum, TRUE))[1:5]
@@ -63,8 +74,19 @@ pre_meta <- subset_samples(dorm1rarefied_sam_data, pre_post_thaw == "pre")
 shansimp_pre <- estimate_richness(presamples, measures = c("Simpson", "Shannon"))
 print(shansimp_pre)
 
+# Shannon
+shan_pre <- estimate_richness(presamples, measures = c("Shannon"))
+print(shan_pre)
+
+# Visualize pre
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
 # Visualize
-boxplot(shansimp_pre)
+boxplot(shan_pre)
 
 # Let's see if it's normally distributed
 hist(shansimp_pre$Shannon, main = "Shannon index", xlab = "")
@@ -79,11 +101,26 @@ phylum.sum_pre <- tapply(taxa_sums(presamples), tax_table(presamples)[, "Phylum"
 top5phyla_pre = names(sort(phylum.sum, TRUE))[1:5]
 TP5_pre = prune_taxa((tax_table(presamples)[, "Phylum"] %in% top5phyla), presamples)
 
-# Visualize the top 5 phyla in pre-thaw samples
-plot_bar(TP5_pre, x = "sample_ID", fill = "Phylum") +
-  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack")
+# Visualize the top 10 phyla in pre-thaw samples
+plot_bar(TP5_pre, x = "core", fill = "Phylum") +
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
+  theme_classic() +
+  #scale_color_viridis(discrete = TRUE, option = "A") +
+  display.brewer.all(n = 10, type = "all", select = NULL, colorblindFriendly = TRUE) +
+  xlab("Core")
 
+# Top 10 phyla in pre-thaw samples 
+phylum.sum_pre <- tapply(taxa_sums(presamples), tax_table(presamples)[, "Phylum"], sum, na.rm=TRUE)
+top10phyla_pre = names(sort(phylum.sum, TRUE))[1:10]
+TP10_pre = prune_taxa((tax_table(presamples)[, "Phylum"] %in% top10phyla), presamples)
 
+# Visualize the top 10 phyla in pre-thaw samples
+plot_bar(TP10_pre, x = "core", fill = "Phylum") +
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
+  theme_classic() +
+  #scale_color_viridis(discrete = TRUE, option = "A") +
+  display.brewer.all(n = 10, type = "all", select = NULL, colorblindFriendly = TRUE) +
+  xlab("Core")
 #************************************************************************************
 # TOP 5 PHYLA IN POST THAW SAMPLES 
 
@@ -102,6 +139,21 @@ TP5_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top5phyla), posts
 plot_bar(TP5_post, x = "sample_ID", fill = "Phylum") +
   geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
   theme_classic()
+
+# Obtain top 10 phyla in post-thaw samples
+
+postsamples <- subset_samples(dorm1rarefied, pre_post_thaw == "post")
+fl1c4 <- subset_samples(dorm1rarefied, core == "FL1C4") # this is where I found out that I have no reads for FL1C4 post thaw
+
+phylum.sum_post <- tapply(taxa_sums(postsamples), tax_table(postsamples)[, "Phylum"], sum, na.rm=TRUE)
+top10phyla_post = names(sort(phylum.sum, TRUE))[1:10]
+TP10_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top10phyla), postsamples)
+
+plot_bar(TP10_post, x = "core", fill = "Phylum") +
+  geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
+  theme_classic() +
+  display.brewer.all(n = 10, type = "all", select = NULL, colorblindFriendly = TRUE) +
+  xlab("Core")
 #************************************************************************************
 
 # Working with distance matrices 
@@ -114,7 +166,6 @@ ord <- ordinate(dorm1rarefied, method = "MDS", distance = "bray")
 plot_ordination(dorm1rarefied, ord, color = "site", shape = "pre_post_thaw") +
   stat_ellipse(aes(group = site))
 
-# Insert permanova code here? 
 
 
 
@@ -152,13 +203,11 @@ ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) +
   ylab("Relative Abundance (Phyla > 2%) \n") 
   #ggtitle("Phylum Composition of Lake Erie \n Bacterial Communities by Sampling Site") 
 
-
 # Scale reads to even depth 
 dorm_scale <- dorm1rarefied %>%
   scale_reads(round = "round") 
 
 # Ordination 
-
 # Ordinate via PCOA
 dorm_pcoa <- ordinate(
   physeq = dorm1rarefied, 
@@ -182,7 +231,6 @@ plot_ordination(
 
 
 # Let's do an NMDS instead
-
 # Run the NMDS and ordinate 
 dorm_nmds <- ordinate(
   physeq = dorm1rarefied, 
@@ -279,6 +327,10 @@ perms_pp <- with(datadorm, how(nperm = 1000, blocks = pre_post_thaw))
 # Permanova assessing composition by site and pre-post thaw 
 sitethaw.pnova <- vegan::adonis2(dorm_bray ~ site + pre_post_thaw, data = datadorm)
 print(sitethaw.pnova)
+
+# Permanova assessing composition by core and pre post thaw 
+corethaw.pnova <- vegan::adonis2(dorm_bray ~ core + pre_post_thaw, data = datadorm)
+print(corethaw.pnova)
 
 sitethaw.strata <- vegan::adonis2(dorm_bray ~ pre_post_thaw, permutations = perms, data = datadorm)
 print(sitethaw.strata)
@@ -485,13 +537,29 @@ kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta)
 plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
 
 # Plot Shannon diversity/making the plot prettier
-plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
-  geom_boxplot(aes(x = reorder(pre_post_thaw))) + # need to reorder so that pre comes before post 
+plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_post_thaw") +
+  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post 
   theme_classic() +
   xlab("Site") +
   theme(text = element_text(size =12)) +
   scale_color_discrete("Treatment")
 
+# coding to reorder pre and post in the boxplot figure
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
+  ggplot(aes(x=reorder(pre_post_thaw))) +
+  geom_boxplot() + # need to reorder so that pre comes before post 
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Treatment")
+
+ggplot(shannon, aes(x = "site", y = "shannon", color = "pre_post_thaw")) +
+  geom_boxplot() 
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12))
+
+geom_boxplot(shannon, aes(x = "site", color = "pre_post_thaw"))
 
 # Plot Simpson Diversity
 plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) +
@@ -501,6 +569,14 @@ plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("
   theme(text = element_text(size =12)) +
   scale_color_discrete("Treatment")
 
+# Replotting Simpson
+
+plot_richness(dorm1rarefied, x = "site", measures = c("Simpson"), color = "pre_post_thaw") +
+  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post 
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
 
 plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) + 
   geom_boxplot()

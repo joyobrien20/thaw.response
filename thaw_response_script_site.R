@@ -126,6 +126,8 @@ ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Class)) +
 # RESPONSE RATIO ANALYSIS BY SITE! 
 # CRREL
 
+crrel_data <- extract(dormOTU, "X2_S73_L002", "X25_S96_L002", "X26_S97_L002",	"X27_S98_L002",	"X28_S99_L002",	"X29_S100_L002",	"X31_S102_L002",	"X4_S75_L002",	"X5_S76_L002",	"X6_S77_L002",	"X4_S75_L002",	"X5_S76_L002", "X6_S77_L002") 
+
 crrel <- read_excel("~/Desktop/response_site.xlsx", sheet = "crrel")
 # Make a dataframe from the phyloseq object
 dormOTU <- dorm1rarefied_OTU %>%

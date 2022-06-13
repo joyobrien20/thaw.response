@@ -30,8 +30,7 @@ library(rstatix)
 library(multcompView)
 library(rcompanion) # attempted to use this to get the significance codes from KW test
 library(agricolae) # used to get the significance codes from the KW test
-install.packages("lm.beta")
-library(lm.beta)
+
 # Read in the data 
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
 resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
@@ -356,5 +355,23 @@ ggplot(linearmodel_Nresp, aes(x = N, y = Cumulative_Respiration)) +
   scale_color_discrete("Site") #changing the name of the legend title
 
 
+# Checking the relationship using all of the replicates (Jessica asked)
+respcheck <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN_check")
+
+shapiro.test(respcheck$Cumulative_Respiration) # not normally distributed
+resp_C_corr_test <- cor.test(x =respcheck$C, y = respcheck$Cumulative_Respiration, method = "spearman")
+print(resp_C_corr_test)
 
 
+ggplot(respcheck, aes(x = C, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  xlab("% C") +
+  ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") #changing the name of the legend title
+
+linearmodel_Crespcheck <- lm(Cumulative_Respiration ~ C, data = respcheck)
+print(linearmodel_Crespcheck)
+summary(linearmodel_Crespcheck)
