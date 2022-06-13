@@ -22,7 +22,7 @@ library(SingleCaseES)# checking the response ratio with another package pt. 2
 # install.packages("devtools")
 # devtools::install_github("leffj/mctoolsr")
 
-# RESPONSE RATIO ANALYSIS
+# RESPONSE RATIO ANALYSIS **** ALL SITES ****
 # Make a dataframe from the phyloseq object
 dormOTU <- dorm1rarefied_OTU %>%
   data.frame()
@@ -94,7 +94,7 @@ r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
 R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
 r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
 # Create a new column from row names 
-res$ID <- rownames(res)
+R_adjust$ID <- rownames(R_adjust)
 
 # selecting rows (ASV's) with significance & values #
 #res = res[res$Sig > 0,]
@@ -108,7 +108,7 @@ res$ID <- rownames(res)
 write.table(res,"thaw_response.txt",sep = "\t")
 
 # Adding in the tax table information so that we can make sense of the res data frame
-tax_response <- left_join(x = res, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
+tax_response <- left_join(x = R_adjust, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
 
 # Save to desktop
 write_csv(tax_response,"~/Desktop/tax_response.csv")
@@ -120,31 +120,27 @@ ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Class)) +
   geom_hline(yintercept = 0, linetype = 2) +
   facet_wrap(~Class,scales = "free_x") +
   theme_bw()
+
+ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = RR - err_R, ymax = RR + err_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Class,scales = "free_x") +
+  theme_bw() +
+  ylab("RR") +
+  xlab ("ASV ID") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 1)) +
+  theme(text = element_text(size = 12))
   
-
-
+#****************************************************
 # RESPONSE RATIO ANALYSIS BY SITE! 
 # CRREL
 
-crrel_data <- extract(dormOTU, "X2_S73_L002", "X25_S96_L002", "X26_S97_L002",	"X27_S98_L002",	"X28_S99_L002",	"X29_S100_L002",	"X31_S102_L002",	"X4_S75_L002",	"X5_S76_L002",	"X6_S77_L002",	"X4_S75_L002",	"X5_S76_L002", "X6_S77_L002") 
-
 crrel <- read_excel("~/Desktop/response_site.xlsx", sheet = "crrel")
-# Make a dataframe from the phyloseq object
-dormOTU <- dorm1rarefied_OTU %>%
- data.frame()
 
-crrelOTU <- crrel %>%
-  data.frame()
-# Read in file (load OTU table) 
-crrel_response <- as.numeric(crrelOTU)
-
-# We are going to scale each OTU count up by 0.01 so that 0 becomes 0.01 and the relatoionship stays the same
-crrelthaw_response <- crrel_response + 0.01
-
-
-# Read in the CRREL OTU table that has been adjusted already (see above)
-
-crrel <- read_excel("~/Desktop/response_site.xlsx", sheet = "crrel")
+# Getting rid of the column of numbers in the matrix
+crrel <- crrel %>%
+  remove_rownames() %>%
+  column_to_rownames(var = 'ASV_ID')
 
 # Replace all 0 with NA
 #thaw_response[thaw_response == 0] = 0.01
@@ -154,29 +150,29 @@ ToF_crrel[ToF_crrel > 0.01] <- 1 #anything above 0 is 1 (Presence absence table)
 
 # Using relative abundance table, creates average
 # treatment_names <- c("sample1", "sample2"...)
-ave1 = apply(thaw_response[,c(1:12,24,30:31)],1,mean,na.rm = TRUE);# Control 
-ave2 = apply(thaw_response[,c(13:23,25:29)],1,mean,na.rm = TRUE)# Treatment 
+crrelave1 = apply(crrel[,c(2:7)],1,mean,na.rm = TRUE);# Control 
+crrelave2 = apply(crrel[,c(1, 8:10)],1,mean,na.rm = TRUE)# Treatment 
 
 # Standard Deviation of ALL samples
-sd1 = apply(thaw_response[,c(1:12,24,30:31)],1,sd,na.rm = TRUE);# Control #
-sd2 = apply(thaw_response[,c(13:23,25:29)],1,sd,na.rm = TRUE)# treatment # 
+crrelsd1 = apply(crrel[,c(2:7)],1,sd,na.rm = TRUE);# Control #
+crrelsd2 = apply(crrel[,c(1, 8:10)],1,sd,na.rm = TRUE)# treatment # 
 
 # How many encounters for ASV/ number of observations
-num1 = apply(ToF[,c(1:12,24,30:31)],1,sum,na.rm = TRUE); #Control#
-num2 = apply(ToF[,c(13:23,25:29)],1,sum,na.rm = TRUE) # Treatment #
+crrelnum1 = apply(ToF_crrel[,c(2:7)],1,sum,na.rm = TRUE); #Control#
+crrelnum2 = apply(ToF_crrel[,c(1, 8:10)],1,sum,na.rm = TRUE) # Treatment #
 
 # Response ratio calculations
 # Sample variance
-v1 = sd1^2/(ave1^2*num1); # Control #
-v2 = sd2^2/(ave2^2*num2) # treatment #
+crrelv1 = crrelsd1^2/(crrelave1^2*crrelnum1); # Control #
+crrelv2 = crrelsd2^2/(crrelave2^2*crrelnum2) # treatment #
 
 # Square root of variance 
-sqv = sqrt(v1+v2)
+crrelsqv = sqrt(crrelv1+crrelv2)
 
 # RR = Response ratio
-RR = log(ave2/ave1)
+crrelRR = log(crrelave2/crrelave1)
 
-rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
+#rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
 # I am going to move forward with RR (cited and vetted)
 
 
@@ -184,29 +180,30 @@ rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response rati
 
 # Confidence interval
 
-ICl_R = RR-1.96*sqv
-ICu_R = RR+1.96*sqv
+crrelICl_R = crrelRR-1.96*crrelsqv
+crrelICu_R = crrelRR+1.96*crrelsqv
 
-ICl_r = rr-1.96*sqv
-ICu_r = rr+1.96*sqv
+#ICl_r = rr-1.96*sqv
+#ICu_r = rr+1.96*sqv
 
 # Error 
-err_R = ICu_R-RR
-err_r = ICu-rr
+crrelerr_R = crrelICu_R-crrelRR
+#err_r = ICu-rr
 
 # Significance
-Sig_R = ICl_R*ICu_R
-Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") # only 1 asv is significant ?? 
+crrelSig_R = crrelICl_R*crrelICu_R
+crrelSig_adjust_R <- p.adjust(crrelSig_R, method = "fdr") 
 
-Sig_r = ICl_r*ICu_r
-Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
+#Sig_r = ICl_r*ICu_r
+#Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
 
 # Creating data frame w/ 3 coloums (RR, err, Sig) 
-R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
-r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
+crrel_R = as.data.frame(cbind(crrelRR,crrelerr_R,crrelSig_R, crrelICl_R, crrelICu_R))
+#r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
 
-R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
-r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
+crrel_R_adjust <- as.data.frame(cbind(crrelRR,crrelerr_R,crrelSig_adjust_R, crrelICl_R, crrelICu_R))
+#r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
+
 # Create a new column from row names 
 res$ID <- rownames(res)
 
@@ -220,18 +217,235 @@ res$ID <- rownames(res)
 #names(res)[4] = "ID"
 
 write.table(res,"thaw_response.txt",sep = "\t")
-
+crrel_R_adjust$ID <- rownames(crrel_R_adjust)
 # Adding in the tax table information so that we can make sense of the res data frame
-tax_response <- left_join(x = res, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
+crrel_tax_response <- left_join(x = crrel_R_adjust, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
 
 # Save to desktop
-write_csv(tax_response,"~/Desktop/tax_response.csv")
-# Filter tax response so that we don't show anything that is not significant 
+write_csv(crrel_tax_response,"~/Desktop/crrel)tax_response_final.csv")
 
+# Filter tax response so that we don't show anything that is not significant 
+crrel_final <- read_excel("~/Desktop/crrel_final_response.xls")
+# write.csv(crrel_tax_response, "~/Desktop/crrel_tax_response.csv"
 # Visualizing the RR data
-ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Class)) + 
-  geom_pointrange(aes(ymin = RR - err, ymax = RR + err)) +
+ggplot(crrel_tax_response %>% slice(1:100), aes(x= ID, y = crrelRR, color = Class)) + 
+  geom_pointrange(aes(ymin = crrelRR - crrelerr_R, ymax = crrelRR + crrelerr_R)) +
   geom_hline(yintercept = 0, linetype = 2) +
   facet_wrap(~Class,scales = "free_x") +
-  theme_bw()
+  theme_bw() +
+  ylab("RR") +
+  xlab ("ASV ID") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 1)) +
+  theme(text = element_text(size = 12))
+  
+#*********************************************************************************
+ 
+# FARMERS LOOP
+
+FL <- read_excel("~/Desktop/response_site.xlsx", sheet = "FL")
+
+# Getting rid of the column of numbers in the matrix
+FL <- FL %>%
+  remove_rownames() %>%
+  column_to_rownames(var = 'ASV_ID')
+
+# Replace all 0 with NA
+#thaw_response[thaw_response == 0] = 0.01
+# creating a new variable (TOF) new table w/ 0 = NA ###
+ToF_FL <- FL;
+ToF_FL[ToF_FL > 0.01] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+FLave1 = apply(FL[,c(5:9)],1,mean,na.rm = TRUE);# Control 
+FLave2 = apply(FL[,c(1:4)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+FLsd1 = apply(FL[,c(5:9)],1,sd,na.rm = TRUE);# Control #
+FLsd2 = apply(FL[,c(1:4)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV/ number of observations
+FLnum1 = apply(ToF_FL[,c(5:9)],1,sum,na.rm = TRUE); #Control#
+FLnum2 = apply(ToF_FL[,c(1:4)],1,sum,na.rm = TRUE) # Treatment #
+
+# Response ratio calculations
+# Sample variance
+FLv1 = FLsd1^2/(FLave1^2*FLnum1); # Control #
+FLv2 = FLsd2^2/(FLave2^2*FLnum2) # treatment #
+
+# Square root of variance 
+FLsqv = sqrt(FLv1+FLv2)
+
+# RR = Response ratio
+FLRR = log(FLave2/FLave1)
+
+#rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
+# I am going to move forward with RR (cited and vetted)
+
+
+# logRespRatio(aves, phase = sqv, base_level = 0.01)
+
+# Confidence interval
+
+FLICl_R = FLRR-1.96*FLsqv
+FLICu_R = FLRR+1.96*FLsqv
+
+#ICl_r = rr-1.96*sqv
+#ICu_r = rr+1.96*sqv
+
+# Error 
+FLerr_R = FLICu_R-FLRR
+#err_r = ICu-rr
+
+# Significance
+FLSig_R = FLICl_R*FLICu_R
+FLSig_adjust_R <- p.adjust(FLSig_R, method = "fdr") 
+
+#Sig_r = ICl_r*ICu_r
+#Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+FL_R = as.data.frame(cbind(FLRR,FLerr_R,FLSig_R, FLICl_R, FLICu_R))
+#r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
+
+FL_R_adjust <- as.data.frame(cbind(FLRR,FLerr_R,FLSig_adjust_R, FLICl_R, FLICu_R))
+#r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
+
+# Create a new column from row names 
+FL_R_adjust$ID <- rownames(FL_R_adjust)
+
+# selecting rows (ASV's) with significance & values #
+#res = res[res$Sig > 0,]
+# Come back to this and decide what to do when Hannah gets back to you
+# res <- filter(res, Sig > 0)
+
+# creating new coloumn named "ID" # 
+#res[,4] = rownames(res);
+#names(res)[4] = "ID"
+
+#write.table(res,"thaw_response.txt",sep = "\t")
+# Adding in the tax table information so that we can make sense of the res data frame
+FL_tax_response <- left_join(x = FL_R_adjust, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
+
+# Save to desktop
+write_csv(FL_tax_response,"~/Desktop/FL_tax_response_final.csv")
+
+# Filter tax response so that we don't show anything that is not significant 
+crrel_final <- read_excel("~/Desktop/crrel_final_response.xls")
+# write.csv(crrel_tax_response, "~/Desktop/crrel_tax_response.csv"
+# Visualizing the RR data
+ggplot(FL_tax_response %>% slice(1:100), aes(x= ID, y = FLRR, color = Class)) + 
+  geom_pointrange(aes(ymin = FLRR - FLerr_R, ymax = FLRR + FLerr_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Class,scales = "free_x") +
+  theme_bw() +
+  ylab("RR") +
+  xlab ("ASV ID") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 1)) +
+  theme(text = element_text(size = 12))
+
+#******************************************************
+#*Utqiagvik response ratio 
+
+UT <- read_excel("~/Desktop/response_site.xlsx", sheet = "UT")
+
+# Getting rid of the column of numbers in the matrix
+UT <- UT %>%
+  remove_rownames() %>%
+  column_to_rownames(var = 'ASV_ID')
+
+# Replace all 0 with NA
+#thaw_response[thaw_response == 0] = 0.01
+# creating a new variable (TOF) new table w/ 0 = NA ###
+ToF_UT <- UT;
+ToF_UT[ToF_UT > 0.01] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+UTave1 = apply(UT[,c(8:12)],1,mean,na.rm = TRUE);# Control 
+UTave2 = apply(UT[,c(1:7)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+UTsd1 = apply(UT[,c(8:12)],1,sd,na.rm = TRUE);# Control #
+UTsd2 = apply(UT[,c(1:7)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV/ number of observations
+UTnum1 = apply(ToF_UT[,c(8:12)],1,sum,na.rm = TRUE); #Control#
+UTnum2 = apply(ToF_UT[,c(1:7)],1,sum,na.rm = TRUE) # Treatment #
+
+# Response ratio calculations
+# Sample variance
+UTv1 = UTsd1^2/(UTave1^2*UTnum1); # Control #
+UTv2 = UTsd2^2/(UTave2^2*UTnum2) # treatment #
+
+# Square root of variance 
+UTsqv = sqrt(UTv1+UTv2)
+
+# RR = Response ratio
+UTRR = log(UTave2/UTave1)
+
+#rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
+# I am going to move forward with RR (cited and vetted)
+
+
+# logRespRatio(aves, phase = sqv, base_level = 0.01)
+
+# Confidence interval
+
+UTICl_R = UTRR-1.96*UTsqv
+UTICu_R = UTRR+1.96*UTsqv
+
+#ICl_r = rr-1.96*sqv
+#ICu_r = rr+1.96*sqv
+
+# Error 
+UTerr_R = UTICu_R-UTRR
+#err_r = ICu-rr
+
+# Significance
+UTSig_R = UTICl_R*UTICu_R
+UTSig_adjust_R <- p.adjust(UTSig_R, method = "fdr") 
+
+#Sig_r = ICl_r*ICu_r
+#Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+UT_R = as.data.frame(cbind(UTRR,UTerr_R,UTSig_R, UTICl_R, UTICu_R))
+#r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
+
+UT_R_adjust <- as.data.frame(cbind(UTRR,UTerr_R,UTSig_adjust_R, UTICl_R, UTICu_R))
+#r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
+
+# Create a new column from row names 
+UT_R_adjust$ID <- rownames(UT_R_adjust)
+
+# selecting rows (ASV's) with significance & values #
+#res = res[res$Sig > 0,]
+# Come back to this and decide what to do when Hannah gets back to you
+# res <- filter(res, Sig > 0)
+
+# creating new coloumn named "ID" # 
+#res[,4] = rownames(res);
+#names(res)[4] = "ID"
+
+#write.table(res,"thaw_response.txt",sep = "\t")
+# Adding in the tax table information so that we can make sense of the res data frame
+UT_tax_response <- left_join(x = UT_R_adjust, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
+
+# Save to desktop
+write_csv(UT_tax_response,"~/Desktop/FL_tax_response_final.csv")
+
+# Filter tax response so that we don't show anything that is not significant 
+crrel_final <- read_excel("~/Desktop/crrel_final_response.xls")
+# write.csv(crrel_tax_response, "~/Desktop/crrel_tax_response.csv"
+# Visualizing the RR data
+ggplot(UT_tax_response %>% slice(1:100), aes(x= ID, y = UTRR, color = Class)) + 
+  geom_pointrange(aes(ymin = UTRR - UTerr_R, ymax = UTRR + UTerr_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Class,scales = "free_x") +
+  theme_bw() +
+  ylab("RR") +
+  xlab ("ASV ID") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 1)) +
+  theme(text = element_text(size = 12))
 
