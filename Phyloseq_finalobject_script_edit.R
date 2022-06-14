@@ -1,8 +1,9 @@
-# Blanks filtered from data set script
-# Data exploring exercise 
-# Joy O'Brien, Ernakovich lab, Masters work 2022
+# Joy O'Brien
+# Master's project, Ernakovich lab 
+# Blanks filtered from data set script (meaning that blanks are REMOVED from the final phyloseq object)
 # Date created: February/March 2022, last updated: April 10, 2022
 # The purpose of this script is to create a phyloseq object from the files exported from the DADA2 pipeline
+# THIS IS THE FINAL VERSION OF THE SCRIPT
 
 # Install the packages needed
 #install.packages("dplyr")     # To manipulate data frames
@@ -16,7 +17,6 @@ library("readxl")       # necessary to import the data from Excel file
 library("dplyr")        # filter and reformat data frames
 library("tibble")       # Needed for converting column to row names
 library("vegan")        #Used for rarifying
-
 
 ## Read the data into R 
 seq_tab <- read_excel("~/Desktop/incubation_16S_v4.xlsx", sheet = "seqtab_final_") # fill this in with the file path for your DADA2 seqtab output
@@ -64,7 +64,6 @@ dorm1 <- subset_taxa(dorm1, Family != "Mitochondria")
 dorm1 <- subset_taxa(dorm1, Order != "Chloroplast") 
 # check to see if mitochondria and chloroplasts were removed
 dorm1  #5725 taxa
-
 # Number of taxa removed from mitochondria and chloroplasts: 3055
 
 # STEP 1: Make phyloseq object that includes the blanks (dorm1) you already have dorm1
@@ -117,7 +116,7 @@ ggplot(dorm.nmds.mapdata_noblank=, aes(x = MDS1, y = MDS2, color = site)) + #set
   geom_line(aes(group = core_rep, color = site))+
   geom_text(aes(label = sample_ID), size = 2, color = "black")
   
-  ## alpha in aes shows more opaque (seethroughness)
+# Note: alpha in aes shows more opaque (seethroughness)
 #geom_text(aes(label = sample), size =2)
 
 summary(dorm_noblank.rarefied)
@@ -127,7 +126,7 @@ saveRDS(dorm_noblank.rarefied@otu_table,"~/Desktop/dorm1rarefied_OTU.rds")
 saveRDS(dorm_noblank.rarefied@tax_table,"~/Desktop/dorm1rarefied_tax_table.rds" )
 saveRDS(dorm_noblank.rarefied@sam_data,"~/Desktop/dorm1rarefied_sam_data.rds")
 
-
+# Notes from Hannah Holland-Moritz after she performed a code check
 # pp: Love how you saved the RDS object at the end of this. One thing to consider doing as well is to save
 # each individual piece of the phyloseq object, OTU table, taxonomy, and metadata that way you can easily hand 
 # them off to someone else in spreadsheet form if you need to. This is particularly important for cases like

@@ -2,9 +2,8 @@
 # Data exploring exercise
 # Joy O'Brien, Ernakovich lab, Masters 2022
 
-# Pseudo code 
 # Tell R to subtract the blanks from the samples (in terms of ASV, remove ASV in the blanks from the samples)
-
+# NOTE: THIS IS JUST A DATA EXPLORING EXERCISE AND WAS NOT USED IN THESIS/PUBLICATION
 
 # Install the packages needed
 #install.packages("dplyr")     # To manipulate data frames
@@ -19,7 +18,7 @@ library("dplyr")        # filter and reformat data frames
 library("tibble")       # Needed for converting column to row names
 library("vegan")        #Used for rarifying
 
-## Read the data into R 
+## Read the data into R (EXCEL SHEET AVAILABLE IN ERNAKOVICH LAB BOX UNDER OBRIEN THESIS)
 seq_tab <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "seqtab_final_") # fill this in with the file path for your DADA2 seqtab output
 taxonomy <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "tax_final (2)", na = c("","NA")) # fill this in with the tax_final file (DADA2 output but manipulated in Excel first)
 metadata <- read_excel("~/Desktop/incubation_16S_final.xlsx", sheet = "metadata_final") # fill this in with the metadata file 
@@ -148,5 +147,5 @@ ggplot(dorm_taxaremoved.nmds, aes(x = MDS1, y = MDS2)) +
   geom_point(aes(),alpha = 1, size = 3) + # Alpha in "aes" shows more opaque (seethroughness)
   geom_text(aes(label = sample), size = 2)
 
-
+# END
 

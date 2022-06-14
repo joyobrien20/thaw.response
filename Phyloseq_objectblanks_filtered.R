@@ -1,6 +1,6 @@
-# Blanks filtered from data set script
-# Data exploring exercise 
-# Joy O'Brien, Ernakovich lab, Masters work 2022
+# Joy O'Brien
+# Masters work 2022, Ernakovich lab
+# Removing blank samples from the phyloseq object
 
 # Install the packages needed
 #install.packages("dplyr")     # To manipulate data frames

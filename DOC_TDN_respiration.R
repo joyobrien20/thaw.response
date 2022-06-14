@@ -1,20 +1,8 @@
 # Joy O'Brien
-# Master's work 
+# Master's work, Ernakovich lab 
 # May 6, 2022
-# This script is a re-work of hypoth1_script taking into account advice from lab meeting on May 6, 2022 (hypoth 1 script has been renamed to DOC_TDN_respiration)
 
-# In this script we will work to: try a Spearman correlation b/w DOC and TDN and cumulative respiration
-# Also we will be working forward with DOC and TDN on the x-axis and respiration on the y-axis
-
-# TO DO'S:
-#     Note: If you do a glm you need to possibly transform the data prior, and add the pre-values in and account for site 
-#   Run a Spearman correlation with the difference in DOC and TDN
-#   Run a GLM with the difference in DOC and the difference in TDN, with cumulative respiration as the y axis (response)
-#   Confirm with Jessica that GLM or Spearman is the way to go; once confirmed and if needed, 
-#   run glm of all comparisons with the family function not gaussian, and an added link function
-
-#   If you are going to run a linear mixed effect model, make sure that site is the mixed effect and that others are the fixed effects
-#   RUN SPEARMAN CORRELATION ON SITES WITH THE RESP, THE COPY NUMBERS, THE DOC AND THE TDN?
+# This script helps us answer whether or not there is a relationship between DOC and respiration and TDN and respiration
 
 #Load necessary libraries
 library(vegan)
@@ -24,14 +12,13 @@ library(ggplot2)
 library(e1071) #for skewness function
 library(qqplotr)
 
-# Read in the data from excel
+# Read in the data from excel (available in excel sheet in Ernakovich box files under OBrien thesis)
 doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_resp")
 #resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
 copynumb <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "copy_numbers")
 resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum_forcopynumb")
 
 # Performing Spearman rank correlations on DOC vs. respiration
-
 # Make a QQ plot 
 qqnorm(x = doctdn$DOC_diff, y = doctdn$Cumulative_Respiration, main = "Q-Q Plot")
 shapiro.test(doctdn$DOC_diff)
@@ -59,8 +46,8 @@ ggplot(doctdn, aes(x = DOC_diff, y = Cumulative_Respiration)) +
   geom_smooth(method = "lm", color = "dark gray", se=TRUE, linetype = "dashed") +
   theme(text = element_text(size = 12)) +
   scale_color_discrete("Site") #changing the name of the legend title
-# Performing Spearman rank correlations on TDN_post and respiration
 
+# Performing Spearman rank correlations on TDN_post and respiration
 tdncorr <- cor.test(x = doctdn$TDN_diff, y = doctdn$Cumulative_Respiration, method = "spearman")
 print(tdncorr) # p-value = 0.01201, rho = 0.468
 
@@ -125,7 +112,6 @@ ggplot(respdoctdn, aes(x = DOC_post, y = Cumulative_Respiration)) +
   geom_point()
  
 # Testing out the use of a glm to show the DOC difference and the respiration response 
-
 glm_docdiff <- glm(DOC_diff ~ Cumulative_Respiration, family = gaussian, data = doctdn)
 print(glm_docdiff)
 summary(glm_docdiff)
@@ -176,7 +162,6 @@ polygon(density(doctdn$TDN_post), col="darkorange")
 shapiro.test(doctdn$TDN_post) #p-value = 0.008402, this is also not normally distributed
 
 # creating the GLM # need to come back and make changes to this! 
-
 linearmodel_respTDNpost<-glm(TDN_post ~ Cumulative_Respiration, family = gaussian, data=respdoctdn)
 print(linearmodel_respTDNpost)
 summary(linearmodel_respTDNpost)
@@ -187,7 +172,7 @@ ggplot(linearmodel_respTDNpost, aes(x = TDN_post, y = Cumulative_Respiration)) +
   scale_y_log10()+
   geom_smooth(method="lm")
      
-
+# END
      
      
                                     

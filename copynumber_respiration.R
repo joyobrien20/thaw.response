@@ -1,14 +1,9 @@
 # Joy O'Brien
-# Master's research
+# Master's research, Ernakovich Lab
 # May 3, 2022
 
-# Work to find evidence for or against hypothesis 2: permafrost soils with a higher cumulative respiration rate 
-# will have a higher qPCR abundance post thaw
-#***********************************************
-
-# TO DO: 
-# RUN GLMS HERE FOR COPY NUMBERS AND RESPIRATION for funsies
-
+# The purpose of this code is to find evidence for or against the hypothesis that permafrost soils with a higher 
+# cumulative respiration rate will have a higher abundance (qPCR copy numbers) post-thaw
 
 # Load the necessary libraries
 library(vegan)
@@ -19,17 +14,17 @@ library(tidyr)
 library(e1071) #for skewness function
 library(FSA)
 
-# Read in the data from excel
+# Read in the data from excel (excel file available in Ernakovich lab box under OBrien thesis)
 cpnumb <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "copy_numbers")
 resp4copy <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum_forcopynumb")
 
 
-## ANALYZING RESPIRATION AND PRE THAW COPY NUMBERS HERE 
+# ANALYZING RESPIRATION AND PRE THAW COPY NUMBERS HERE 
 
 # Visualizing the data to start off 
 scatter.smooth(cpnumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration)
 
-# Checking for normality--totally forgot to do this! 
+# Checking for normality
 shapiro.test(cpnumb$copy_number_per_gsoil_PRE) #p-value = 0.005065 Data is not normal
 shapiro.test(resp4copy$Cumulative_Respiration) #p-value = 0.03419 data is not normal 
 
@@ -87,8 +82,7 @@ pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_co
             scale_shape_discrete("Copy number type", labels = c("Post-thaw", "Pre-thaw")) + #this line changes the name of the shape but doesnt take the data with it 
             scale_color_discrete("Site")
             # geom_smooth(aes(color = "pre_post_thaw")) trying to change the color of the regression lines
-
-# guide = guide_legend(reverse = TRUE)
+            # guide = guide_legend(reverse = TRUE)
 
 
 # NEXT LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
@@ -103,7 +97,6 @@ ggplot(respcpnumb, aes(x =copy_number_per_gsoil_POST, y = Cumulative_Respiration
   geom_smooth(method = "lm")
 
 # Cleaning up the figure for publication 
-
 ggplot(respcpnumb, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
   geom_point(aes(color = site), size = 2.5) +
   theme_classic() +
@@ -213,3 +206,4 @@ ggplot(precopyresp, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respirati
   scale_x_log10() +
   scale_y_log10()
 
+# END
