@@ -66,8 +66,9 @@ doc <- ggplot(doctdn_diff, aes(x = site, y =DOC_diff)) +
   theme_classic() +
   xlab("Site") +
   ylab("Change in DOC (ppm)") +
-  theme(text = element_text(size = 12))
+  theme(text = element_text(size = 18))
 
+plot(doc)
 # TDN
 # Checking for normality with a Shapiro test for TDN diff 
 shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
@@ -97,8 +98,8 @@ tdn <- ggplot(doctdn_diff, aes(x = site, y = TDN_diff)) +
   theme_classic() +
   xlab("Site") +
   ylab("Change in TDN (ppm)") +
-  theme(text = element_text(size = 12))
-
+  theme(text = element_text(size = 18))
+plot(tdn)
 # DOC difference box plot 
 geom_boxplot(doctdn_diff)
 
@@ -124,7 +125,7 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration)) +
   theme_classic() +
   xlab("Site") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
-  theme(text = element_text(size = 12))
+  theme(text = element_text(size = 18))
 
 # Let's run a dunn test for respiration and site 
 dunnTest(Cumulative_Respiration ~ site, data = resp, method ='bh') 
@@ -317,12 +318,12 @@ ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) +
   geom_smooth(method = "lm")
 
 ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = site), size = 2.5) +
+  geom_point(aes(color = site), size = 3.5) +
   theme_classic() +
   xlab("% C") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
-  theme(text = element_text(size = 12)) +
+  theme(text = element_text(size = 18)) +
   scale_color_discrete("Site") #changing the name of the legend title
 
 # Looking at the relationship between N and cumulative respiration 
@@ -337,12 +338,12 @@ print(resp_n_corr)
 
 # Making a pretty plot
 ggplot(resp_tctn, aes(x = N, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = site), size = 2.5) +
+  geom_point(aes(color = site), size = 3.5) +
   theme_classic() +
   xlab("% N") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
-  theme(text = element_text(size = 12)) +
+  theme(text = element_text(size = 18)) +
   scale_color_discrete("Site") #changing the name of the legend title
 
 # Trying GLM since this data is normally distributed 
@@ -354,12 +355,12 @@ summary(linearmodel_Cresp)
 # cor.test(resp_tctn$C, resp_tctn$Cumulative_Respiration, method = "pearson")
 
 ggplot(linearmodel_Cresp, aes(x = C, y = Cumulative_Respiration)) + 
-  geom_point(aes(color = site, size = 2.5)) +
+  geom_point(aes(color = site, size = 3.5)) +
   theme_classic() +
   xlab("% C") +
   ylab("Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   geom_smooth(method = "lm", color = "dark gray", se = TRUE) +
-  theme(text = element_text(size = 12)) +
+  theme(text = element_text(size = 18)) +
   scale_color_discrete("Site") #changing the name of the legend title
 
 # N

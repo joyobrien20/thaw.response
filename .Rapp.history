@@ -1,3 +1,5 @@
 load("/Users/joyobrien/Desktop/JMO_masters_2022/dorm1rarefied_sam_data.rds")
 load("/Users/joyobrien/Desktop/JMO_masters_2022/dorm1rarefied_OTU.rds")
 load("/Users/joyobrien/Desktop/JMO_masters_2022/dorm1rarefied_sam_data.rds")
+load("/Users/joyobrien/Desktop/JMO_masters_2022/dorm1rarefied.rds")
+load("/Users/joyobrien/Desktop/JMO_masters_2022/dorm1rarefied_OTU.rds")

@@ -110,8 +110,8 @@ plot_bar(TP5_pre, fill = "Phylum") +
 
 # Top 10 phyla in pre-thaw samples 
 phylum.sum_pre <- tapply(taxa_sums(presamples), tax_table(presamples)[, "Phylum"], sum, na.rm=TRUE)
-top10phyla_pre = names(sort(phylum.sum, TRUE))[1:10]
-TP10_pre = prune_taxa((tax_table(presamples)[, "Phylum"] %in% top10phyla), presamples)
+top10phyla_pre = names(sort(phylum.sum_pre, TRUE))[1:10]
+TP10_pre = prune_taxa((tax_table(presamples)[, "Phylum"] %in% top10phyla_pre), presamples)
 
 # Visualize the top 10 phyla in pre-thaw samples by site
 plot_bar(TP5_pre, x = "site", fill = "Phylum") +
@@ -122,12 +122,15 @@ plot_bar(TP5_pre, x = "site", fill = "Phylum") +
   xlab("Site")
 
 # Visualize the top 10 phyla in pre-thaw samples by core
-plot_bar(TP10_pre, x = "core", fill = "Phylum") +
+plot_bar(TP10_pre, x = "site", fill = "Phylum") +
   geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
   theme_classic() +
   #scale_color_viridis(discrete = TRUE, option = "A") +
   display.brewer.all(n = 10, type = "all", select = NULL, colorblindFriendly = TRUE) +
-  xlab("Core")
+  xlab("Site") +
+  ylab("Relative Abundance")+
+  theme(text = element_text(size = 18))
+
 #************************************************************************************
 # TOP 5 PHYLA IN POST THAW SAMPLES 
 
@@ -151,14 +154,16 @@ postsamples <- subset_samples(dorm1rarefied, pre_post_thaw == "post")
 fl1c4 <- subset_samples(dorm1rarefied, core == "FL1C4") # this is where I found out that I have no reads for FL1C4 post thaw
 
 phylum.sum_post <- tapply(taxa_sums(postsamples), tax_table(postsamples)[, "Phylum"], sum, na.rm=TRUE)
-top10phyla_post = names(sort(phylum.sum, TRUE))[1:10]
-TP10_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top10phyla), postsamples)
+top10phyla_post = names(sort(phylum.sum_post, TRUE))[1:10]
+TP10_post = prune_taxa((tax_table(postsamples)[, "Phylum"] %in% top10phyla_post), postsamples)
 # Visualize the top 10 phyla in post-thaw samples
-plot_bar(TP10_post, x = "core", fill = "Phylum") +
+plot_bar(TP10_post, x = "site", fill = "Phylum") +
   geom_bar(aes(color = Phylum , fill = Phylum), stat="identity", position = "stack") +
   theme_classic() +
   display.brewer.all(n = 10, type = "all", select = NULL, colorblindFriendly = TRUE) +
-  xlab("Core")
+  xlab("Site") +
+  ylab("Relative Abundance")+
+  theme(text = element_text(size = 18))
 #************************************************************************************
 
 # Working with distance matrices 
@@ -244,6 +249,29 @@ dorm_nmds <- ordinate(
 print(dorm_nmds)
 summary(dorm_nmds)
 
+# ATTEMPTING TO ADD IN SPECIES VECTORS
+library(vegan)
+library(ggplot2)
+library(grid)
+library(readxl)
+
+abs_abund <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "abs_abund_all")
+# Getting rid of the column of numbers in the matrix
+abs_abund <- abs_abund %>%
+  remove_rownames() %>%
+  column_to_rownames(var = 'ASV')
+# convert to matrix?
+abs_abund_mat <- as.matrix(abs_abund)
+
+# NMDS code for bi-plot? # COME BACK TO THIS AND MAKE IT WORK
+nmds <- metaMDSdist(abs_abund_mat, distance = "bray")
+nmds
+
+en <- envfit(nmds, abs_abund, permutations = 999, na.rm = TRUE)
+en
+plot(nmds)
+
+plot (en)
 plot_ordination(
   physeq = dorm1rarefied,
   ordination = dorm_nmds,
@@ -252,14 +280,14 @@ plot_ordination(
   #title = "NMDS of Permafrost Bacterial Communities"
 ) +
   geom_point(aes(color = site), alpha = 0.7, size = 4) +
-  geom_point(colour = "grey90", size = 1.5)+
+  geom_point(size = 2)+
   theme_classic() +
-  theme(text = element_text(size = 12)) +
+  theme(text = element_text(size = 18)) +
   scale_color_discrete("Site") +
   scale_shape_discrete("Treatment")
 
 print(dorm_nmds)
-  
+  # colour = "grey90"
 #**************************************************************************
 # Calculate bray curtis distance matrix
 dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
@@ -419,6 +447,7 @@ ggplot(alphadiv, aes(x = site, y = mean, color = site, group = site, shape = sit
 shansimp <- estimate_richness(dorm1rarefied, measures = c("Simpson", "Shannon"))
 print(shansimp)
 
+shan <- estimate_richness(dorm1rarefied, measures = c("Shannon"))
 # Export as a CSV
 # write.csv(shansimp,"~/Desktop/shansimp.csv")
 
@@ -546,13 +575,14 @@ kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta)
 #Alpha diversity take two (https://micca.readthedocs.io/en/latest/phyloseq.html)
 # Alpha diversity: plotting Shannon and Chao1
 plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
+shannon<- merge(ssmeta,shan)
 
 # Plot Shannon diversity/making the plot prettier
 plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_post_thaw") +
-  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post 
+  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post +
   theme_classic() +
   xlab("Site") +
-  theme(text = element_text(size =12)) +
+  theme(text = element_text(size =18)) +
   scale_color_discrete("Treatment")
 
 # coding to reorder pre and post in the boxplot figure
@@ -577,16 +607,17 @@ plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("
   geom_boxplot() +
   theme_classic() +
   xlab("Site") +
-  theme(text = element_text(size =12)) +
+  theme(text = element_text(size =18)) +
   scale_color_discrete("Treatment")
 
 # Replotting Simpson
 
-plot_richness(dorm1rarefied, x = "site", measures = c("Simpson"), color = "pre_post_thaw") +
-  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post 
+plot_richness(dorm1rarefied, x = "site", measures = c("Simpson"), color = "pre_post_thaw", ) +
+  geom_boxplot(aes(color = "pre_post_thaw")) +# need to reorder so that pre comes before post 
+  geom_point(size = 0.25) +
   theme_classic() +
   xlab("Site") +
-  theme(text = element_text(size =12)) +
+  theme(text = element_text(size =18)) +
   scale_color_discrete("Treatment")
 
 plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) + 
