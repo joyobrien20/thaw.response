@@ -1,22 +1,8 @@
 # ANOVAs_site_script_reseq.R
-#******EDIT!!!!*******
+
 # Joy O'Brien
 # Master's work, Ernakovich lab
-# May 4, 2022
-
-# THIS IS THE ANOVAS FOR SITE COMPARISON SCIPT
-# 
-# Data we are working with here: We will be running ANOVAs on DOC data post thaw, TDN data post thaw, 
-# copy numbers pre thaw and copy numbers post thaw and cum respiration across sites
-
-# The reason we are NOT including pre thaw data here is because the pre thaw data is not properly replicated (due to lack of soil to replicate). 
-
-#* Random script notes*
-#* 
-# Visualizing/checking for theoretical model distribution (https://www.statology.org/anova-assumptions/)
-# hist(doctdn$DOC_post)
-# qqnorm(anova_docpost$residuals)
-
+# March 28, 2023
 
 # Load the necessary libraries
 library(vegan)
@@ -31,7 +17,7 @@ library(rcompanion) # attempted to use this to get the significance codes from K
 library(agricolae) # used to get the significance codes from the KW test
 
 # Read in the data (this is all accessible in the incubation_physical_chemical.xlsx sheet on Ernakovich Lab Box Folder)
-doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
+
 resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
 ph_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_pre")
 ph_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_post")
@@ -41,75 +27,10 @@ EC_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC
 TC_TN <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "TC_TN")
 EC_both <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_both")
 GWC_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "GWC_both")
-texture <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Texture")
-doctdn_diff <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_diff")
-resp_tctn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN")
 
-# FIRST: RUNNING STATS ON THE DIFFERENCE IN DOC AND TDN PRE AND POST THAW
 
-# DOC
-# Checking for normality with a Shapiro test for DOC diff
-shapiro.test(doctdn_diff$DOC_diff) #p-value = 0.0056; this data is not NORMAL
 
-# The data is NOT normally distributed so I am going to try a Kruskall-Wallis test 
-kruskal.test(DOC_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared =  chi-squared = 4.16, df = 2, p-value = 0.1249
-# The difference in DOC pre and post thaw is not significant across sites 
-
-# May want to do a pairwise wilcox test for this ? http://www.sthda.com/english/wiki/kruskal-wallis-test-in-r
-dunnTest(DOC_post ~ site, data = doctdn_diff, method = "bonferroni") # Check to see if the method is necessary? If it needs to be changed 
-
-#let's visualize DOC_diff content across site 
-boxplot(DOC_diff ~ site, data = doctdn_diff)
-
-# For thesis and pub: making the doc_diff boxplot prettier 
-
-doc <- ggplot(doctdn_diff, aes(x = site, y =DOC_diff)) + 
-  geom_boxplot() +
-  theme_classic() +
-  xlab("Site") +
-  ylab("Change in DOC (ppm)") +
-  theme(text = element_text(size = 18))
-
-plot(doc)
-# TDN
-# Checking for normality with a Shapiro test for TDN diff 
-shapiro.test(doctdn_diff$TDN_diff) # p-value = 0.01293 # this is not normal as expected
-
-# Therefore, we will run a Kruskall-Wallis test 
-kruskal.test(TDN_diff ~ site, data = doctdn_diff) # Kruskal-Wallis chi-squared = 10.445, df = 2, p-value = 0.005394
-
-kruskal(doctdn_diff$TDN_diff, doctdn_diff$site, group=TRUE, p.adj="bonferroni")$groups # use this to get the letter significance codes
-# The difference in TDN pre and post thaw is statistically significant across sites
-
-# Since the p-value of the Kruskal for TDN_diff is significant, we need to run a dunntest. 
-
-# Now let's look at a dunn test
-tdndunn <- dunnTest(TDN_diff ~ site, data = doctdn_diff, method = "bh")
-print(tdndunn)
-k_test <- k$doctdn_diff
-cldList(comparison = k_test$Comparison,
-        p.value    = PT$P.adj,
-        threshold  = 0.05)
-
-# Now let's visualize with a box plot
-boxplot(TDN_diff ~ site, data = doctdn_diff)
-
-# Making it better for pub and thesis 
-tdn <- ggplot(doctdn_diff, aes(x = site, y = TDN_diff)) + 
-  geom_boxplot() +
-  theme_classic() +
-  xlab("Site") +
-  ylab("Change in TDN (ppm)") +
-  theme(text = element_text(size = 18))
-plot(tdn)
-# DOC difference box plot 
-geom_boxplot(doctdn_diff)
-
-# Comparing TDN and DOC together 
-kruskal.test(DOC_diff ~ TDN_diff, data = doctdn_diff)
-#**********************************************************************
-
-# NOW TRANSITIONING TO CUMULATIVE RESPIRATION
+# CUMULATIVE RESPIRATION
 
 # Let's look at the differences in cumulative respiration across sites 
 shapiro.test(resp$Cumulative_Respiration) #this is not normally distributed W = 0.89709, p-value = 0.01868
@@ -131,6 +52,8 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration)) +
 
 # Let's run a dunn test for respiration and site 
 dunnTest(Cumulative_Respiration ~ site, data = resp, method ='bh') 
+
+# Start here on March 29, 2023
 
 # Checking to see if the copy number data pre thaw is normally distributed
 shapiro.test(cpnumb$copy_number_per_gsoil_PRE) #p-value = 0.005065, not normal

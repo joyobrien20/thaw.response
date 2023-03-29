@@ -28,9 +28,9 @@ library("vegan")        #Used for rarifying
 
 
 # Read the data into R from excel file incubation_16S_reseq.xlsx 
-seq_tab.raw <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "seqtab_final_reseq") # fill this in with the file path for your DADA2 seqtab output
-taxonomy <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "tax_final_reseq", na = c("","NA")) # fill this in with the tax_final file DADA2 output
-metadata <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "metadata_final_reseq") # fill this in with the metadata file 
+seq_tab.raw <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "seqtab_final_reseq") # fill this in with the file path for your DADA2 seqtab output
+taxonomy <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "tax_final_reseq", na = c("","NA")) # fill this in with the tax_final file DADA2 output
+metadata <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "metadata_final_reseq") # fill this in with the metadata file 
 
 # Define row names from the ASV column 
 seq_tab <- seq_tab.raw %>%
@@ -115,9 +115,9 @@ dorm1 # 22923 taxa
 
 # Save the phyloseq object to your desktop/folder if this is your final object (save individual parts of the phyloseq object)
 saveRDS(dorm_noblank.rarefied.reseq,"~/GitHub/Masters_publication/Masters_publication_R/dorm1rarefied_reseq.rds")
-saveRDS(dorm_noblank.rarefied.reseq@otu_table,"~/GitHub/Masters_publication/Masters_publication_R/dorm1rarefied_OTU_reseq.rds")
-saveRDS(dorm_noblank.rarefied.reseq@tax_table,"~/GitHub/Masters_publication/Masters_publication_R/dorm1rarefied_tax_table_reseq.rds" )
-saveRDS(dorm_noblank.rarefied.reseq@sam_data,"~/GitHub/Masters_publication/Masters_publication_R/dorm1rarefied_sam_data_reseq.rds")
+saveRDS(dorm_noblank.rarefied.reseq@otu_table,"~/GitHub/Masters_publication/dorm1rarefied_OTU_reseq.rds")
+saveRDS(dorm_noblank.rarefied.reseq@tax_table,"~/GitHub/Masters_publication/dorm1rarefied_tax_table_reseq.rds" )
+saveRDS(dorm_noblank.rarefied.reseq@sam_data,"~/GitHub/Masters_publication/dorm1rarefied_sam_data_reseq.rds")
 
 #*********Comparing sequence runs************************************************
 # Make a phyloseq object that contains the original and re-sequenced samples
