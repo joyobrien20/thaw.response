@@ -17,11 +17,11 @@ List of files associated with project:
 
 List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
 In chronological order of steps (each script contains purpose/description at the top of it): 
-- Phyloseq_finalobject_script_edit.R
-- blanks_subtracted. R (data exercise)
-- Phyloseq_objectblanks_filtered.R
-- anovas_site_script.R
-- copynumber_respiration.R
+- phyloseqobject_seq_reseq.R
+
+- ANOVAs_abiotic_site_script_reseq.R
+- copynumber_respiration_reseq.R
+Edit the names here:
 - DOC_TDN_respiration. R
 - micro_stats.R
 - thaw_response_script.R
