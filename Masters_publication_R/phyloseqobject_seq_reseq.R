@@ -28,9 +28,9 @@ library("vegan")        #Used for rarifying
 
 
 # Read the data into R from excel file incubation_16S_reseq.xlsx 
-seq_tab.raw <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "seqtab_final_reseq") # fill this in with the file path for your DADA2 seqtab output
-taxonomy <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "tax_final_reseq", na = c("","NA")) # fill this in with the tax_final file DADA2 output
-metadata <- read_excel("~/GitHub/Masters_publication/Masters_publication_R/incubation_16S_reseq.xlsx", sheet = "metadata_final_reseq") # fill this in with the metadata file 
+seq_tab.raw <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "seqtab_final_reseq") # fill this in with the file path for your DADA2 seqtab output
+taxonomy <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "tax_final_reseq", na = c("","NA")) # fill this in with the tax_final file DADA2 output
+metadata <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "metadata_final_reseq") # fill this in with the metadata file 
 
 # Define row names from the ASV column 
 seq_tab <- seq_tab.raw %>%

@@ -31,19 +31,19 @@ library(rcompanion) # attempted to use this to get the significance codes from K
 library(agricolae) # used to get the significance codes from the KW test
 
 # Read in the data (this is all accessible in the incubation_physical_chemical.xlsx sheet on Ernakovich Lab Box Folder)
-doctdn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
-resp <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
-ph_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_pre")
-ph_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_post")
-ph_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "pH_both")
-EC_pre <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_pre")
-EC_post <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_post")
-TC_TN <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "TC_TN")
-EC_both <-  read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "EC_both")
-GWC_both <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "GWC_both")
-texture <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Texture")
-doctdn_diff <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_diff")
-resp_tctn <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN")
+doctdn <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "DOC_TDN")
+resp <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "Respiration_cum")
+ph_pre <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "pH_pre")
+ph_post <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "pH_post")
+ph_both <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "pH_both")
+EC_pre <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "EC_pre")
+EC_post <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "EC_post")
+TC_TN <-  read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "TC_TN")
+EC_both <-  read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "EC_both")
+GWC_both <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "GWC_both")
+texture <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "Texture")
+doctdn_diff <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "DOC_TDN_diff")
+resp_tctn <- read_excel("~/GitHub/Masters_publication/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN")
 
 # FIRST: RUNNING STATS ON THE DIFFERENCE IN DOC AND TDN PRE AND POST THAW
 
