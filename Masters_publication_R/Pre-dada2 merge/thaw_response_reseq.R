@@ -1,0 +1,134 @@
+# Joy O'Brien
+# July 18, 2023
+# Master's project, Ernakovich lab
+
+# Need to go back and re-do abs abundance for all sites instead of relative abundance 
+# But maybe for ESA you can use relative abundance
+
+# Thaw response code (response ratio analysis code from Hannah Holland-Moritz, modeled and modified from the  
+# following publication: Fan, K., Holland-Moritz, H., Walsh, C., Guo, X., Wang, D., Bai, Y., Zhu, Y., Fierer, N. & Chu, H. (2022). 
+# Identification of the rhizosphere microbes that actively consume plant-derived carbon. Soil Biology and Biochemistry, 166, 108577. 
+# https://doi.org/10.1016/j.soilbio.2022.108577)
+
+# Installing and using mctools, it wasn't as straight forward as "install.packages"
+# devtools::install_github("leffj/mctoolsr")
+# Load the necessary libraries
+library(mctoolsr)
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(multcompView)
+library(phyloseq)
+library(readxl)
+library(biomformat)
+library(readr)
+library(magrittr)
+library(readxl)
+library(ARPobservation) # checking the response ratio with another package
+library(SingleCaseES)# checking the response ratio with another package pt. 2
+
+
+
+# RESPONSE RATIO ANALYSIS
+# Make a dataframe from the phyloseq object
+dormOTU <- dorm1rarefied_OTU_reseq %>%
+  data.frame()
+# Read in file (load OTU table) 
+thaw_response <- absabund_allsites
+# We are going to scale each OTU count up by 0.01 so that 0 becomes 0.01 and the relatoionship stays the same
+thaw_response <- thaw_response + 0.01
+
+# write.csv(thaw_response, "~/Desktop/thaw_response.csv")
+write.csv(dormOTU, "~/Desktop/dormOTU_reseq.csv")
+# Replace all 0 with NA
+#thaw_response[thaw_response == 0] = 0.01
+# creating a new variable (TOF) new table w/ 0 = NA ###
+ToF <- thaw_response;
+ToF[ToF > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Using relative abundance table, creates average (go through and double check these!)
+# treatment_names <- c("sample1", "sample2"...)
+ave1 = apply(thaw_response[,c(13:20,22:27,31:34,38,39)],1,mean,na.rm = TRUE);# Control # might have to change these for each site csv
+ave2 = apply(thaw_response[,c(1:12,21,28:30,35:37,40:43)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+sd1 = apply(thaw_response[,c(13:20,22:27,31:34,38,39)],1,sd,na.rm = TRUE);# Control #
+sd2 = apply(thaw_response[,c(1:12,21,28:30,35:37,40:43)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV/ number of observations
+num1 = apply(ToF[,c(13:20,22:27,31:34,38,39)],1,sum,na.rm = TRUE); #Control#
+num2 = apply(ToF[,c(1:12,21,28:30,35:37,40:43)],1,sum,na.rm = TRUE) # Treatment #
+
+# Response ratio calculations
+# Sample variance
+v1 = sd1^2/(ave1^2*num1); # Control #
+v2 = sd2^2/(ave2^2*num2) # treatment #
+
+# Square root of variance 
+sqv = sqrt(v1+v2)
+
+# RR = Response ratio
+RR = log(ave2/ave1)
+
+rr <- log(ave2 + ave1)-log(ave2) #this was in an effort to compare response ratio calculations +
+# I am going to move forward with RR (cited and vetted)
+# logRespRatio(aves, phase = sqv, base_level = 0.01)
+
+# Confidence interval
+
+ICl_R = RR-1.96*sqv
+ICu_R = RR+1.96*sqv
+
+ICl_r = rr-1.96*sqv
+ICu_r = rr+1.96*sqv
+
+# Error 
+err_R = ICu_R-RR
+err_r = ICu-rr
+
+# Significance
+Sig_R = ICl_R*ICu_R
+Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") # only 1 asv is significant ?? 
+
+Sig_r = ICl_r*ICu_r
+Sig_adjust_r <- p.adjust(Sig_r, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
+r = as.data.frame(cbind(rr,err_r,Sig_r, ICl_r, ICu_r))
+
+R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
+r_a = as.data.frame(cbind(rr,err_r,Sig_adjust_r, ICl_r, ICu_r))
+
+# stopped here, need to figure out where res comes from/update
+# goal: get the code to work and create a figure of RR for relative abundance of all sites
+# Create a new column from row names 
+res$ID <- rownames(res)
+
+# selecting rows (ASV's) with significance & values #
+res = res[res$Sig > 0,]
+# Come back to this and decide what to do when Hannah gets back to you
+res <- filter(res, Sig > 0)
+
+# creating new coloumn named "ID" # 
+res[,4] = rownames(res);
+names(res)[4] = "ID"
+
+write.table(res,"thaw_response.txt",sep = "\t")
+
+# Adding in the tax table information so that we can make sense of the res data frame
+tax_response <- left_join(x = res, y = tax_tablecsv, by = c("ID"="#ASV_ID"))
+
+# Save to desktop
+write_csv(tax_response,"~/Desktop/tax_response.csv")
+# Filter tax response so that we don't show anything that is not significant 
+
+# Visualizing the RR data
+ggplot(tax_response %>% slice(1:100), aes(x= ID, y = RR, color = Class)) + 
+  geom_pointrange(aes(ymin = RR - err, ymax = RR + err)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Class,scales = "free_x") +
+  theme_bw()
+
+# END
+
