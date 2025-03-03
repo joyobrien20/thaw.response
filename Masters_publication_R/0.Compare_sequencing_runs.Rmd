@@ -8,13 +8,15 @@ output: html_document
 ```{r setup, include=FALSE}
 # Determine the variation in seequencing runs using Permanova
 library(vegan)
+library(readxl)
 
 ```
 
 ```{r}
-# Load in the original and resequenced phyloseq objects
+# Load in the original and resequenced phyloseq objects and metadata
 phyloseq_original <- readRDS("~/GitHub/Masters_publication/Masters_publication_R/CHECK_dorm1rarefied_original.rds")
 phyloseq_reseq <- readRDS("~/GitHub/Masters_publication/Masters_publication_R/CHECK_dorm1rarefied_reseq.rds")
+meta <- read_excel("~/GitHub/Masters_publication/incubation_16S_reseq.xlsx", sheet = "comp_seq_runs")
 ```
 
 ```{r}
@@ -32,6 +34,9 @@ sample_data_orig$run <- "Run1"
 sample_data_reseq$run <- "Run2"
 
 ```
+
+
+
 
 ```{r}
 # Combine data

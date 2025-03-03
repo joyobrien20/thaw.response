@@ -19,10 +19,10 @@ List of files associated with project:
 
 List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
 In chronological order of steps (each script contains purpose/description at the top of it): 
-- Phyloseq_finalobject_script_edit.R
+- Phyloseq_finalobject_script_edit.R --> 1.Dada2_to_Phyloseq.Rmd
 - blanks_subtracted. R (data exercise)
 - Phyloseq_objectblanks_filtered.R
-- anovas_site_script.R
+- anovas_site_script.R --> 4.Biotic_Abiotic_soil_properties.Rmd
 - copynumber_respiration.R
 - DOC_TDN_respiration. R
 - micro_stats.R
