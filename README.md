@@ -3,9 +3,12 @@ Joy O'Brien
 Dr. Jessica Ernakovich
 University of New Hampshire
 
-JMO_masters_2022
-Joy O'Brien's master's work at the University of New Hampshire, 2020-2022
+JMO_masters_2022 now thaw.response
 Manuscript title: TBD
+
+Joy O'Brien's master's work at the University of New Hampshire, 2020-2022
+
+Thesis title: Before and after: investigating the effect of thaw on the permafrost microbiome
 
 Our goal within this study is to understand how taxa in the permafrost microbiome respond to thaw by assessing post-thaw microbial abundance and composition. Additionally, we wanted to identify the relationship between microbial respiration and available resources (i.e., dissolved organic carbon (DOC) and total dissolved nitrogen (TDN) content following thaw. 
 Specifically, we aimed to 1) understand how microbial respiration correlates with soil DOC and TDN abundance given the relationship between microbial respiration and microbial activity which is largely dependent on available soil nutrients, 2) identify and quantify bacterial taxa in the permafrost microbiome before and after thaw, and 3) identify taxa that respond similarly to thaw across all three sites.
@@ -14,7 +17,6 @@ We hypothesized that 1) permafrost soils with a high DOC and TDN content will ha
 
 List of files associated with project:
 
-
 List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
 In chronological order of steps (each script contains purpose/description at the top of it): 
 - phyloseqobject_seq_reseq.R
@@ -22,6 +24,23 @@ In chronological order of steps (each script contains purpose/description at the
 - ANOVAs_abiotic_site_script_reseq.R
 - copynumber_respiration_reseq.R
 Edit the names here:
+=======
+- incubation_physical_chemical.xlsx
+- incubation_16S_v4.xlsx
+- dorm1rarefied_OTU.rds
+- dorm1rarefied_sam_data.rds
+- dorm1rarefied_tax_table.rds
+- dorm1rarefied.rds
+- tax_tablecsv.csv
+
+List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
+In chronological order of steps (each script contains purpose/description at the top of it): 
+- Phyloseq_finalobject_script_edit.R
+- blanks_subtracted. R (data exercise)
+- Phyloseq_objectblanks_filtered.R
+- anovas_site_script.R
+- copynumber_respiration.R
+>>>>>>> upstream/main
 - DOC_TDN_respiration. R
 - micro_stats.R
 - thaw_response_script.R
@@ -38,3 +57,9 @@ Jessica Ernakovich
 Hannah Holland-Moritz
 Lukas Bernhardt
 Nate Blais
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> upstream/main
