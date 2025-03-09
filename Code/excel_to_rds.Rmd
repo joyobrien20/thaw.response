@@ -1,0 +1,34 @@
+---
+title: "excel to rds"
+author: "Joy O'Brien"
+date: "2024-11-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load a tab-separated file
+data <- read.delim("~/Desktop/seqtab_orig_final.txt", header = TRUE, sep = "\t")
+#data <- read_excel("~/Desktop/seqtab_orig_final_renamedv2.xlsx", sheet = "seqtab_orig_final")
+
+# Rename the columns to get rid of the X
+colnames(data) <- gsub("^X", "", colnames(data))
+
+# View the data
+head(data)
+
+# Checking to see what type of object it is -- should be matrix
+#st1 <- readRDS("~/Desktop/seqtab_orig_final_renamed.rds")
+#class(st1) # data.frame
+
+
+# Convert to matrix  
+data_mat <- as.matrix(data)
+
+# Check for negative values in st1
+any(data_mat < 0) # TRUE if negative values exist
+which(data_mat < 0, arr.ind = TRUE) # Location of negative values
+
+# Save the data as an .rds file
+saveRDS(data_mat, "~/Desktop/seqtab_orig_final_renamedv2_txt.rds")
+
+```
