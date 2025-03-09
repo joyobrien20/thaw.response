@@ -1,11 +1,4 @@
-# Masters_publication
-Joy O'Brien
-Dr. Jessica Ernakovich
-University of New Hampshire
-
-JMO_masters_2022 now thaw.response
-Manuscript title: TBD
-
+JMO_masters_2022
 Joy O'Brien's master's work at the University of New Hampshire, 2020-2022
 
 Thesis title: Before and after: investigating the effect of thaw on the permafrost microbiome
@@ -16,15 +9,6 @@ Specifically, we aimed to 1) understand how microbial respiration correlates wit
 We hypothesized that 1) permafrost soils with a high DOC and TDN content will have a higher cumulative respiration during thaw due to an increase in microbial decomposition, 2) there will be a positive relationship between bacterial abundance and the cumulative respiration rate of the thawed samples, and 3) post-thaw microbial communities, across all three sites, will demonstrate similarities in taxa that respond positively to thaw. 
 
 List of files associated with project:
-
-List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
-In chronological order of steps (each script contains purpose/description at the top of it): 
-- phyloseqobject_seq_reseq.R
-
-- ANOVAs_abiotic_site_script_reseq.R
-- copynumber_respiration_reseq.R
-Edit the names here:
-=======
 - incubation_physical_chemical.xlsx
 - incubation_16S_v4.xlsx
 - dorm1rarefied_OTU.rds
@@ -35,12 +19,11 @@ Edit the names here:
 
 List of R scripts associated with this project and available here under JMO_masters_2022: https://github.com/joyobrien20 and here: https://github.com/ErnakovichLab
 In chronological order of steps (each script contains purpose/description at the top of it): 
-- Phyloseq_finalobject_script_edit.R
+- Phyloseq_finalobject_script_edit.R --> 1.Dada2_to_Phyloseq.Rmd
 - blanks_subtracted. R (data exercise)
 - Phyloseq_objectblanks_filtered.R
-- anovas_site_script.R
+- anovas_site_script.R --> 4.Biotic_Abiotic_soil_properties.Rmd
 - copynumber_respiration.R
->>>>>>> upstream/main
 - DOC_TDN_respiration. R
 - micro_stats.R
 - thaw_response_script.R
@@ -57,9 +40,6 @@ Jessica Ernakovich
 Hannah Holland-Moritz
 Lukas Bernhardt
 Nate Blais
-<<<<<<< HEAD
-=======
 
 
 
->>>>>>> upstream/main
