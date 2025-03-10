@@ -232,9 +232,26 @@ plot_ordination(
   scale_color_brewer(palette = "Set1", name = "Site") +
   scale_shape_discrete("Treatment") +
   scale_shape_manual("Treatment", labels = c("Pre-thaw", "Post-thaw"), values = c(2, 1))
+```
 
 
+```{r}
+library(ggplot2)
+library(RColorBrewer)
 
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.nmds,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"), name = "Site") +  # Custom colors for site
+  scale_shape_discrete("Treatment") +
+  scale_shape_manual("Treatment", labels = c("Pre-thaw", "Post-thaw"), values = c(2, 1))
 
 ```
 
