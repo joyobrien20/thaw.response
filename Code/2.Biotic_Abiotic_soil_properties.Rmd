@@ -1,5 +1,5 @@
 ---
-title: "4.Biotic_Abiotic_soil_properties"
+title: "2.Biotic_Abiotic_soil_properties"
 author: "Joy O'Brien"
 date: "2025-03-03"
 output: html_document
@@ -9,9 +9,9 @@ Data we are working with here: We will be running ANOVAs on DOC data post thaw, 
 copy numbers pre thaw and copy numbers post thaw and cum respiration across sites
 
 The reason we are NOT including pre thaw data here is because the pre thaw data is not properly replicated (due to lack of soil to replicate). 
-```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
-```
+#```{r setup, include=FALSE}
+#knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
+#```
 
 ```{r}
 # Load libraries
@@ -154,7 +154,7 @@ print(TNtukey)
 tukey_tn <-multcompLetters4(TNaov, TNtukey)
 ```
 
-4. GWC # Pick up here with the stats for GWC
+4. GWC
 ```{r setup, include=FALSE}
 # Now we are going to look at GWC across sites pre and post thaw 
 GWC_pre_thaw <- GWC[GWC$pre_post_thaw == "pre", ]
@@ -173,16 +173,12 @@ shapiro.test(GWC_post_thaw$GWC) # p-value = 0.4414
 GWC_postaov <- aov(GWC ~ site, data = GWC_post_thaw)
 summary(GWC_postaov) 
 
-# Comparing pre and post thaw
-
-# Combine pre and post thaw into one dataset
-GWC_combined <- rbind(GWC_pre_thaw, GWC_post_thaw)
-
+# Comparing pre and post thaw using the original GWC dataset
 # Checking if normality is met for both pre and post thaw
-shapiro.test(GWC_combined$GWC) # Test for overall normality
+shapiro.test(GWC$GWC) # Test for overall normality
 
 # ANOVA to compare GWC between pre and post thaw across sites
-GWC_change <- aov(GWC ~ pre_post_thaw * site, data = GWC_combined)
+GWC_change <- aov(GWC ~ pre_post_thaw * site, data = GWC)
 summary(GWC_change)  # Main effects for thaw treatment and site, and interaction
 
 # If significant results, perform Tukey's HSD test to compare levels of "pre_post_thaw" 
@@ -214,6 +210,7 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration)) +
 # Let's run a dunn test for respiration and site 
 dunn.resp <- dunnTest(Cumulative_Respiration ~ site, data = resp, method = 'bh')
 ```
+
 ```{r}
 # Making the plot prettier for publication
 library(ggsignif)
@@ -249,7 +246,6 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) +
 3. Copy number analysis pre and post thaw
 
 ```{r}
-
 # Subset the data first 
 pre_thaw_copy <- cpnumb[cpnumb$pre_post_thaw == "pre", ]
 post_thaw_copy <- cpnumb[cpnumb$pre_post_thaw == "post", ]
@@ -273,7 +269,9 @@ boxplot(copy_numb ~ site, data = post_thaw_copy)
 ```
 
 
-GLM with C and N
+
+
+4. GLM with C and N
 ```{r}
 # Trying GLM since this data is normally distributed 
 # C

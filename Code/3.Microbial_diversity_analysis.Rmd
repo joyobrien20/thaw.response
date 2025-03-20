@@ -1,0 +1,796 @@
+---
+title: "3. Microbial diversity analysis"
+author: "Joy O'Brien"
+date: "2025-03-19"
+output: html_document
+---
+Previously micro_stats.R (April 29, 2022)
+# This script encompassess statistical tests that were performed on the phyloseq object
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/joyobrien/GitHub/thaw.response")
+```
+
+```{r}
+# Load the necessary packages (this is from the phyloseq tutorial)
+library("phyloseq")
+library("ggplot2")      # graphics
+library("readxl")       # necessary to import the data from Excel file
+library("dplyr")        # filter and reformat data frames
+library("tibble")       # Needed for converting column to row names
+library("vegan")
+library("viridis")
+library("RColorBrewer")
+library("colorRamps")
+library("colorspace")
+library("ggpubr")
+library("readxl")
+library("FSA")
+library("agricolae") # used to get significance codes 
+```
+```{r}
+# Load in the phyloseq object
+thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
+```
+0. Looking at top phylum and classes for fun
+```{r}
+# TOP 5 PHYLA
+# Load necessary libraries
+library(phyloseq)
+library(ggplot2)
+
+# Summarize taxa at the Phylum level
+phyla_abundance <- tax_glom(thaw, taxrank = "Phylum")
+
+# Convert phyloseq object to a dataframe
+phyla_df <- as.data.frame(tax_table(phyla_abundance))
+phyla_df$Abundance <- taxa_sums(phyla_abundance)
+
+# Summarize and sort by abundance
+phyla_df <- phyla_df[order(-phyla_df$Abundance), ]  # Sort in descending order
+top_5_phyla <- phyla_df[1:5, ]  # Select top 5 phyla
+
+# Plot using ggplot2
+ggplot(top_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Phyla",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+# TOP 10 PHYLA
+
+top_10_phyla <- phyla_df[1:10, ]  # Select top 10 phyla
+
+# Plot using ggplot2
+ggplot(top_10_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Phyla",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+0. Looking at the top phyla and classes for fun
+```{r}
+# TOP 5 CLASSES
+# Load necessary libraries
+library(phyloseq)
+library(ggplot2)
+
+# Summarize taxa at the Phylum level
+class_abundance <- tax_glom(thaw, taxrank = "Class")
+
+# Convert phyloseq object to a dataframe
+class_df <- as.data.frame(tax_table(class_abundance))
+class_df$Abundance <- taxa_sums(class_abundance)
+
+# Summarize and sort by abundance
+class_df <- class_df[order(-class_df$Abundance), ]  # Sort in descending order
+top_5_class <- class_df[1:5, ]  # Select top 5 classes
+
+# Plot using ggplot2
+ggplot(top_5_class, aes(x = reorder(Class, -Abundance), y = Abundance, fill = Class)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Class",
+       x = "Class",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+# TOP 10 MOST ABUNDANT CLASS
+top_10_class <- class_df[1:10, ]  # Select top 10 classes
+
+# Plot using ggplot2
+ggplot(top_10_class, aes(x = reorder(Class, -Abundance), y = Abundance, fill = Class)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Class",
+       x = "Class",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Top 5 Phylum pre-thaw 
+```{r}
+# TOP 5 PHYLA pre-thaw
+presamples <- subset_samples(thaw, pre_post_thaw == "pre")
+# Summarize taxa at the Phylum level
+prephyla_abundance <- tax_glom(presamples, taxrank = "Phylum")
+
+# Convert phyloseq object to a dataframe
+prephyla_df <- as.data.frame(tax_table(prephyla_abundance))
+prephyla_df$Abundance <- taxa_sums(prephyla_abundance)
+
+# Summarize and sort by abundance
+prephyla_df <- prephyla_df[order(-prephyla_df$Abundance), ]  # Sort in descending order
+pretop_5_phyla <- prephyla_df[1:5, ]  # Select top 5 phyla
+
+# Plot using ggplot2
+ggplot(pretop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Phyla PRE-THAW",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Top 5 phylum post-thaw
+```{r}
+# TOP 5 PHYLA pre-thaw
+postsamples <- subset_samples(thaw, pre_post_thaw == "post")
+# Summarize taxa at the Phylum level
+postphyla_abundance <- tax_glom(postsamples, taxrank = "Phylum")
+
+# Convert phyloseq object to a dataframe
+postphyla_df <- as.data.frame(tax_table(postphyla_abundance))
+postphyla_df$Abundance <- taxa_sums(postphyla_abundance)
+
+# Summarize and sort by abundance
+postphyla_df <- postphyla_df[order(-postphyla_df$Abundance), ]  # Sort in descending order
+posttop_5_phyla <- postphyla_df[1:5, ]  # Select top 5 phyla
+
+# Plot using ggplot2
+ggplot(posttop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Phyla POST-THAW",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+1. Shannon and Simpson Diversity metrics
+```{r}
+# Creating a table of Simpson and Shannon diversity
+shansimp <- estimate_richness(thaw, measures = c("Simpson", "Shannon"))
+
+# Visualize shannon
+plot_richness(thaw, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
+
+# Visualize Simpson
+plot_richness(thaw, x = "site", color = "pre_post_thaw", measures = c("Simpson")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
+
+  
+```
+
+
+```{r}
+# coding to reorder pre and post in the boxplot figure 
+# what you might have to do is work with the shan simp file instead of the phyloseq object and then use ggplot with 
+# the reorder function & the rest of the code , or edit the phyloseq object so that it's no thaw and thaw so that pre comes before post 
+
+# use the mutate function to re-name the pre and post in the phyloseeq object 
+# example 
+metadata <- data.frame("tissue type"=c("soil", "leaves", "leaf"), check.names = FALSE)
+newdata <- dorm1rarefied %>% mutate(pre_post_thaw = replace(pre_post_thaw, pre== "before"))
+
+plot <- plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Shannon")) 
+plot2 <- as.data.frame(plot)
+
+# okay for shannon and simpson box plots, this is the code you have to use: 
+# also before you dive in with the new data, you need to obtain the shannon and simpson values, put them in an excel sheet with metadata, 
+# rename the pre_post_thaw column to thaw_type, and then change pre to no_thaw, and post to thaw
+# then run using this code 
+
+ggplot(shan_simp, aes(x = site, y = Shannon, color = thaw_type)) +
+  geom_boxplot() + 
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
+  theme(text = element_text(size = 12))
+
+# Repeat above code with simpson diversity?
+
+ggplot(shannon, aes(x = "site", y = "shannon", color = "pre_post_thaw")) +
+  geom_boxplot() 
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12))
+
+geom_boxplot(shannon, aes(x = "site", color = "pre_post_thaw"))
+
+# Plot Simpson Diversity
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =18)) +
+  scale_color_discrete("Treatment")
+
+# Replotting Simpson
+
+plot_richness(dorm1rarefied, x = "site", measures = c("Simpson"), color = "pre_post_thaw", ) +
+  geom_boxplot(aes(color = "pre_post_thaw")) +# need to reorder so that pre comes before post 
+  geom_point(size = 0.25) +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =18)) +
+  scale_color_discrete("Treatment")
+
+plot_richness(dorm1rarefied, x = "site", color = "pre_post_thaw", measures = c("Simpson")) + 
+  geom_boxplot()
+
+# Make a boxplot of the number of OTUs and Shannon entropy 
+plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + geom_boxplot()
+
+# END
+```
+
+
+
+
+
+A. Obtain metrics
+```{r}
+# Creating a table of Simpson and Shannon diversity and run stats
+shan.simp <- as.data.frame(shansimp)
+
+# Add metadata to this dataframe
+metadata_df <- as.data.frame(sample_data(thaw))
+shansimp.meta <- merge(metadata_df, shan.simp, by = "row.names", all.x = TRUE)
+
+# Rename the first column after the merge
+#colnames(shansimp.meta)[1] <- "sample_ID"
+
+# View the merged dataframe
+head(shansimp.meta)
+
+# Save the table as a CSV file
+#write.csv(shansimp.meta, "~/GitHub/thaw.response/Data/thaw_diversity_metrics.csv", row.names = FALSE)
+
+```
+B. Check for normality
+```{r}
+# Before running stats, check to see if data is normally distributed
+# Checking normal distribution: SHANNON
+hist(shansimp.meta$Shannon, main = "Shannon index", xlab = "")
+shapiro.test(shansimp.meta$Shannon) # not normally distributed W = 0.89436, p-value = 0.0008473
+
+# Checking normal distribution: SIMPSON
+hist(shansimp.meta$Simpson, main = "Simpson index", xlab = "")
+shapiro.test(shansimp.meta$Simpson) # not normally distributed W = 0.57395, p-value = 5.77e-10
+```
+
+C. Testing for differences in Shannon and Simpson by site
+```{r}
+# Check to see if Shannon differs significantly between sites regardless of treatment
+# Recall that Shannon is not normally distributed
+kruskal.test(shansimp.meta$Shannon ~ site, data = shansimp.meta)
+dunnTest(shansimp.meta$Shannon ~ site, data = shansimp.meta)
+
+# Check to see if Simpson differs significantly between sites
+kruskal.test(shansimp.meta$Simpson ~ site, data = shansimp.meta)
+dunnTest(shansimp.meta$Simpson ~ site, data = shansimp.meta)
+```
+
+```{r}
+library(dplyr)
+
+shansimp.meta1 <- shansimp.meta  # Make a copy of the original dataframe
+
+# Rename the column 'pre_post_thaw' to 'thaw_type'
+colnames(shansimp.meta1)[colnames(shansimp.meta1) == "pre_post_thaw"] <- "thaw_type"
+
+# Replace 'pre_thaw' with 'no_thaw' and 'post_thaw' with 'thaw'
+shansimp.meta2 <- shansimp.meta1 %>%
+  mutate(thaw_type = recode(thaw_type, "pre" = "no_thaw", "post" = "thaw"))
+
+# Now that this is changed, we can plot 
+ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
+  geom_boxplot() + 
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
+  theme(text = element_text(size = 12)) 
+
+# Repeat above code with simpson diversity
+
+ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
+  theme(text = element_text(size =12))
+```
+
+
+```{r}
+# for publicaiton and matching aesthetics
+# Define custom colors for thaw_type
+thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
+
+# Shannon Diversity Plot
+ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
+  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  # Custom colors
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  theme(text = element_text(size = 12))
+
+# Simpson Diversity Plot
+ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  
+  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  theme(text = element_text(size =12))
+```
+```{r}
+# Facet wrap
+# Reshape data to long format for faceting
+library(tidyr)
+library(ggplot2)
+
+shansimp_long <- shansimp.meta2 %>%
+  pivot_longer(cols = c(Shannon, Simpson), 
+               names_to = "Diversity_Metric", 
+               values_to = "Value")
+
+# Define custom colors
+thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
+
+# Create faceted plot
+ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  # Add jittered points
+  scale_color_manual(values = thaw_colors, labels = c('Pre-thaw', 'Post-thaw')) +  
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +  # Separate facets for Shannon and Simpson
+  theme(text = element_text(size = 12))
+
+```
+
+C. Subset Shannon and Simpson by site
+```{r}
+# Subset data by site and check for normality
+sscrrel <- subset(shansimp.meta, site =="CRREL")
+ssfl <- subset(shansimp.meta, site =="FL")
+ssut <- subset(shansimp.meta, site =="Utqiagvik")
+
+# Testing normality for each site: SHANNON
+shapiro.test(sscrrel$Shannon) # p = 0.9954 normally distributed, use anova 
+shapiro.test(ssfl$Shannon) # p = 0.02876 not normally distributed, use kruskal
+shapiro.test(ssut$Shannon) # p = 0.001398 not normally distributed, use kruskal 
+
+# Testing normality for each site: SIMPSON
+shapiro.test(sscrrel$Simpson) # p = 0.03035 # use kruskal to evaluate 
+shapiro.test(ssfl$Simpson) # p = 0.00119 # use kruskal
+shapiro.test(ssut$Simpson) # p = 3.407e-05 not normally distributed, use kruskal
+```
+
+
+D. Min and Max values for Shannon and Simpson
+```{r}
+# Load dplyr for grouping and summarizing the data
+library(dplyr)
+
+# Calculate min and max Shannon by treatment
+shannon_by_treatment <- shansimp.meta %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    min_shannon = min(Shannon),
+    max_shannon = max(Shannon)
+  )
+
+# Calculate min and max Simpson by treatment
+simpson_by_treatment <- shansimp.meta %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    min_simpson = min(Simpson),
+    max_simpson = max(Simpson)
+  )
+
+# Print the results
+print(shannon_by_treatment)
+print(simpson_by_treatment)
+```
+E. Mean and SD for Shannon and Simpson
+```{r}
+# Obtain average Shannon values for each site with SD
+# Load dplyr for data manipulation
+library(dplyr)
+
+# Calculate min, max, and standard error for Shannon by site
+shannon_by_site <- shansimp.meta %>%
+  group_by(site) %>%
+  summarise(
+    avg_shannon = mean(Shannon),
+    se_shannon = sd(Shannon) / sqrt(n())
+  )
+
+# Calculate min, max, and standard error for Simpson by site
+simpson_by_site <- shansimp.meta %>%
+  group_by(site) %>%
+  summarise(
+    avg_simpson = mean(Simpson),
+    se_simpson = sd(Simpson) / sqrt(n())
+  )
+
+# Print the results
+print(shannon_by_site)
+print(simpson_by_site)
+
+```
+
+```{r}
+
+```
+
+```{r}
+# Shannon by site
+kruskal.test(ssmeta$Shannon ~ site, data = ssmeta)# chi-squared = 13.765, df = 2, p-value = 0.001026
+kruskal(ssmeta$Shannon, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups #using this to get the letter significance codes 
+dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
+
+# Shannon by pre thaw 
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups # to get significance codes
+
+# Shannon by pre- post-thaw by site 
+# CRREL
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, site == "CRREL", group=TRUE, p.adj="bonferroni") #$groups
+
+# Farmers Loop 
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
+
+# Utqiagvik
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
+
+# Subsetting by site manually 
+crrel_ss <- subset(ssmeta,subset =  site == "CRREL")
+kruskal.test(crrel_ss$Shannon ~ pre_post_thaw, data = crrel_ss)
+
+#dunnTest(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) 
+```
+
+
+
+
+```{r}
+# Working with distance matrices 
+# Creating a bray curtis distance matrix from our phyloseq object
+dist.bc <- distance(dorm1rarefied, method = "bray")
+print(dist.bc)
+# Unifrac
+dist.uf <- distance(dorm1rarefied, method = "unifrac")
+ord <- ordinate(dorm1rarefied, method = "MDS", distance = "bray")
+# Visualize
+plot_ordination(dorm1rarefied, ord, color = "site", shape = "pre_post_thaw") +
+  stat_ellipse(aes(group = site))
+# Calculate bray curtis distance matrix
+dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
+
+# Making a data frame from the phyloseq object 
+dormOTU <- dorm1rarefied_OTU %>%
+  data.frame()
+
+# Saving matrix
+# write.csv(dormOTU,"~/Desktop/dormOTU.csv")
+
+# Need to transform so species are columns and samples are rows (for vegan)
+dormOTUtransform <- t(sqrt(dormOTU))
+dorm_bray <- vegdist(dormOTUtransform, method = "bray")
+
+# Make a data frame from the sample_data
+# sampledf <- data.frame(sample_data(dorm1rarefied))
+
+# Adonis test (PERMANOVA)
+# adonis(dorm_bray ~ pre_post_thaw, data = sampledf)
+
+# Homogeneity of dispersion test for site
+beta <- betadisper(dorm_bray, dorm1rarefied_sam_data$site) # testing the dispersion between groups (sites)
+print(beta) # dispersion is how scattered the points are
+
+adonis2(dorm_bray ~ site, data=datadorm)
+
+# Homogeneity of dispersion test for core
+beta_core <- betadisper(dorm_bray, dorm1rarefied_sam_data$core)
+print(beta_core)
+
+# Homogeneity of dispersion test for pre post thaw 
+beta_pp <- betadisper(dorm_bray, dorm1rarefied_sam_data$pre_post_thaw)
+print(beta_pp)
+# Are these distances (dispersion/distance to the median) significant?
+
+# Site 
+permutest(beta)
+
+# Core 
+# permutest(beta_core)
+
+# Pre post thaw 
+permutest(beta_pp)
+
+# Tukey for site 
+tukey_beta <- TukeyHSD(beta)
+plot(tukey_beta) 
+print(tukey_beta)
+
+# Tukey for core 
+# tukey_beta_core <- TukeyHSD(beta_core)
+# print(tukey_beta_core)
+
+# Tukey for pre post thaw  # not necessary since it wasnt significant
+tukey_beta_pp <- TukeyHSD(beta_pp)
+print(tukey_beta_pp)
+```
+
+```{r}
+# Making a data frame for PERMANOVA analysis
+datadorm <- data.frame(sample_data(dorm1rarefied)) 
+
+# site 
+perms <- with(datadorm, how(nperm = 1000, blocks = site))
+# trying this with core 
+# perms_core <- with(datadorm, how(nperm = 1000, blocks = core))
+
+# pre post thaw? 
+perms_pp <- with(datadorm, how(nperm = 1000, blocks = pre_post_thaw))
+
+# Permanova assessing composition by site and pre-post thaw 
+sitethaw.pnova <- vegan::adonis2(dorm_bray ~ site + pre_post_thaw, data = datadorm)
+print(sitethaw.pnova)
+
+# Permanova assessing composition by core and pre post thaw 
+corethaw.pnova <- vegan::adonis2(dorm_bray ~ core + pre_post_thaw, data = datadorm)
+print(corethaw.pnova)
+
+sitethaw.strata <- vegan::adonis2(dorm_bray ~ pre_post_thaw, permutations = perms, data = datadorm)
+print(sitethaw.strata)
+
+# SAVE
+saveRDS(dorm1rarefied, "~/Desktop/dorm1.rds")
+saveRDS(dorm_bray, "~/Desktop/dormbray.rds")
+ 
+#Alpha Diversity (this code was not used for analysis)
+min_lib <- min(sample_sums(dorm1rarefied))
+
+# Initialize matrices to store richness and evenness estimates
+nsamp = nsamples(dorm1rarefied)
+trials = 100
+
+richness <- matrix(nrow = nsamp, ncol = trials)
+row.names(richness) <- sample_names(dorm1rarefied)
+
+evenness <- matrix(nrow = nsamp, ncol = trials)
+row.names(evenness) <- sample_names(dorm1rarefied)
+
+# It is always important to set a seed when you subsample so your result is replicable 
+set.seed(3)
+
+for (i in 1:100) {
+  # Subsample
+  r <- rarefy_even_depth(dorm1rarefied, sample.size = min_lib, verbose = FALSE, replace = TRUE)
+  
+  # Calculate richness
+  rich <- as.numeric(as.matrix(estimate_richness(r, measures = "Observed")))
+  richness[ ,i] <- rich
+  
+  # Calculate evenness
+  even <- as.numeric(as.matrix(estimate_richness(r, measures = "InvSimpson")))
+  evenness[ ,i] <- even
+}
+```
+
+
+```{r}
+# Simpson pre post thaw by site (obtaining the significance codes)
+
+# CRREL
+kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel)
+kruskal(sscrrel$Simpson, sscrrel$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+# FL
+kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl)
+kruskal(ssfl$Simpson, ssfl$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+# Utqiagvik 
+kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut)
+kruskal(ssut$Simpson, ssut$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+# Simpson by site 
+kruskal.test(ssmeta$Simpson ~ site, data = ssmeta) # chi-squared = 9.5593, df = 2, p-value = 0.008399
+dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
+
+# Using the base Kruskal test we find that it's the same as above with the FSA package Kruskal test 
+#stats::kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
+# Checking to see if Simpson is normally distributed
+shapiro.test(ssmeta$Simpson) # this is not normally distributed, p = 1.541e-07
+
+# Simpson by site 
+kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
+kruskal(ssmeta$Simpson, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups
+dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
+# Simpson by pre- post-thaw 
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, data = ssmeta) #chi-squared = 18.564, df = 1, p-value = 1.643e-05
+kruskal(ssmeta$Simpson, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
+
+# Simpson by pre-post thaw by site 
+# CRREL
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
+
+# FL
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
+
+# Utqiagvik
+kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
+```
+
+
+```{r}
+
+#Alpha diversity take two (https://micca.readthedocs.io/en/latest/phyloseq.html)
+# Alpha diversity: plotting Shannon and Chao1
+plot_richness(dorm1rarefied, measures = c("Chao1", "Shannon"))
+shannon<- merge(ssmeta,shan)
+
+# THIS NEEDS TO BE FIXED FOR PUBLICATION, YOU DON'T WANT POST AND PRE TO HAVE THE SAME BOX
+# Plot Shannon diversity/making the plot prettier
+plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_post_thaw") +
+  geom_boxplot(aes(color = "pre_post_thaw")) + # need to reorder so that pre comes before post +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =18)) +
+  scale_color_discrete("Treatment")
+
+
+# Code for box plots above (trying to fix the above code)
+plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_post_thaw") +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  theme(text = element_text(size =12)) +
+  scale_color_discrete("Treatment")
+```
+
+
+```
+
+
+Extra code that was not used:
+```{r}
+#********************************************************************************
+# BELOW IS EXTRA CODE (THAT HAS NOT BEEN USED) FOR MAKING A BAR PLOT
+#Stacked bar plot (https://deneflab.github.io/MicrobeMiseq/demos/mothur_2_phyloseq.html)
+dorm_phylum <- dorm1rarefied %>%
+  tax_glom(taxrank = "Phylum") %>%                     # agglomerate at phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% # Transform to rel. abundance
+  psmelt() %>%                                         # Melt to long format
+  filter(Abundance > 0.02) %>%                         # Filter out low abundance taxa
+  arrange(Phylum)                                      # Sort data frame alphabetically by phylum
+
+phylum_colors <- c(
+  "#CBD588", "#5F7FC7", "orange","#DA5724", "#508578", "#CD9BCD",
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861"
+)
+
+
+# Plot with ggplot 
+ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) + 
+  facet_grid(site~.) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = phylum_colors) +
+  scale_x_discrete(
+    breaks = c("7/8", "8/4", "9/2", "10/6"),
+    labels = c("Jul", "Aug", "Sep", "Oct"), 
+    drop = FALSE
+  ) +
+  # Remove x axis title
+  theme(axis.title.x = element_blank()) + 
+  #
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  ylab("Relative Abundance (Phyla > 2%) \n") 
+  #ggtitle("Phylum Composition of Lake Erie \n Bacterial Communities by Sampling Site") 
+
+# Scale reads to even depth 
+dorm_scale <- dorm1rarefied %>%
+  scale_reads(round = "round") 
+
+# Ordination 
+# Ordinate via PCOA
+dorm_pcoa <- ordinate(
+  physeq = dorm1rarefied, 
+  method = "PCoA", 
+  distance = "bray"
+)
+
+# Plot the PCOA
+plot_ordination(
+  physeq = dorm1rarefied,
+  ordination = dorm_pcoa,
+  color = "site",
+  shape = "pre_post_thaw",
+  title = "PCoA of permafrost bacterial communities pre- and post thaw"
+) + 
+  scale_color_manual(values = c("#a65628", "red", "#ffae19",
+                                "#4daf4a", "#1919ff", "darkorchid3", "magenta")
+  ) +
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(colour = "grey90", size = 1.5)
+```
+More extra code that was not used:
+```{r}
+# Create a new dataframe to hold the means and standard deviations of richness estimates
+SampleID <- row.names(richness)
+mean <- apply(richness, 1, mean)
+sd <- apply(richness, 1, sd)
+measure <- rep("Richness", nsamp)
+rich_stats <- data.frame(SampleID, mean, sd, measure)
+
+# Create a new dataframe to hold the means and standard deviations of evenness estimates
+SampleID <- row.names(evenness)
+mean <- apply(evenness, 1, mean)
+sd <- apply(evenness, 1, sd)
+measure <- rep("Inverse Simpson", nsamp)
+even_stats <- data.frame(SampleID, mean, sd, measure)
+
+alpha <- rbind(rich_stats, even_stats)
+s <- data.frame(sample_data(dorm1rarefied))
+alphadiv <- merge(alpha, s) 
+
+ggplot(alphadiv, aes(x = site, y = mean, color = site, group = site, shape = site)) +
+  geom_point(size = 2) + 
+  geom_line(size = 0.8) +
+  facet_wrap(~measure, ncol = 1, scales = "free") +
+  scale_color_manual(values = c("#E96446", "#302F3D", "#87CEFA")) +
+  scale_x_discrete(
+    breaks = c("7/8", "8/4", "9/2", "10/6"),
+    labels = c("Jul", "Aug", "Sep", "Oct"), 
+    drop = FALSE
+  ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+
+```
+
