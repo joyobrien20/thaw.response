@@ -29,6 +29,7 @@ library("readxl")
 library("FSA")
 library("agricolae") # used to get significance codes 
 ```
+
 ```{r}
 # Load in the phyloseq object
 thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
@@ -195,6 +196,499 @@ plot_richness(thaw, x = "site", color = "pre_post_thaw", measures = c("Simpson")
 ```
 
 
+
+
+
+A. Obtain Shannon and Simpson metrics
+```{r}
+# Creating a table of Simpson and Shannon diversity and run stats
+shan.simp <- as.data.frame(shansimp)
+
+# Add metadata to this dataframe
+metadata_df <- as.data.frame(sample_data(thaw))
+shansimp.meta <- merge(metadata_df, shan.simp, by = "row.names", all.x = TRUE)
+
+# Rename the first column after the merge
+#colnames(shansimp.meta)[1] <- "sample_ID"
+
+# View the merged dataframe
+head(shansimp.meta)
+
+# Save the table as a CSV file
+#write.csv(shansimp.meta, "~/GitHub/thaw.response/Data/thaw_diversity_metrics.csv", row.names = FALSE)
+
+```
+B. Check for normality of the metrics
+```{r}
+# Before running stats, check to see if data is normally distributed
+# Checking normal distribution: SHANNON
+hist(shansimp.meta$Shannon, main = "Shannon index", xlab = "")
+shapiro.test(shansimp.meta$Shannon) # not normally distributed W = 0.89436, p-value = 0.0008473
+
+# Checking normal distribution: SIMPSON
+hist(shansimp.meta$Simpson, main = "Simpson index", xlab = "")
+shapiro.test(shansimp.meta$Simpson) # not normally distributed W = 0.57395, p-value = 5.77e-10
+```
+
+C. Testing for differences in Shannon and Simpson by site
+```{r}
+# Check to see if Shannon differs significantly between sites regardless of treatment
+# Recall that Shannon is not normally distributed
+kruskal.test(shansimp.meta$Shannon ~ site, data = shansimp.meta)
+dunnTest(shansimp.meta$Shannon ~ site, data = shansimp.meta)
+
+# Check to see if Simpson differs significantly between sites
+kruskal.test(shansimp.meta$Simpson ~ site, data = shansimp.meta)
+dunnTest(shansimp.meta$Simpson ~ site, data = shansimp.meta)
+
+# To plot with significance codes?
+kruskal(ssmeta$Shannon, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups #using this to get the letter significance codes 
+dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
+
+```
+
+
+
+D. Min and Max values for Shannon and Simpson
+```{r}
+# Load dplyr for grouping and summarizing the data
+library(dplyr)
+
+# Calculate min and max Shannon by treatment
+shannon_by_treatment <- shansimp.meta %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    min_shannon = min(Shannon),
+    max_shannon = max(Shannon)
+  )
+
+# Calculate min and max Simpson by treatment
+simpson_by_treatment <- shansimp.meta %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    min_simpson = min(Simpson),
+    max_simpson = max(Simpson)
+  )
+
+# Print the results
+print(shannon_by_treatment)
+print(simpson_by_treatment)
+```
+
+E. Mean and SD for Shannon and Simpson
+```{r}
+# Obtain average Shannon values for each site with SD
+# Load dplyr for data manipulation
+library(dplyr)
+
+# Calculate min, max, and standard error for Shannon by site
+shannon_by_site <- shansimp.meta %>%
+  group_by(site) %>%
+  summarise(
+    avg_shannon = mean(Shannon),
+    se_shannon = sd(Shannon) / sqrt(n())
+  )
+
+# Calculate min, max, and standard error for Simpson by site
+simpson_by_site <- shansimp.meta %>%
+  group_by(site) %>%
+  summarise(
+    avg_simpson = mean(Simpson),
+    se_simpson = sd(Simpson) / sqrt(n())
+  )
+
+# Print the results
+print(shannon_by_site)
+print(simpson_by_site)
+
+```
+
+2. Shannon and Simpson by site 
+A. Subset Shannon and Simpson by site
+```{r}
+# Subset data by site and check for normality
+sscrrel <- subset(shansimp.meta, site =="CRREL")
+ssfl <- subset(shansimp.meta, site =="FL")
+ssut <- subset(shansimp.meta, site =="Utqiagvik")
+
+# Testing normality for each site: SHANNON
+shapiro.test(sscrrel$Shannon) # p = 0.9954 normally distributed, use anova 
+shapiro.test(ssfl$Shannon) # p = 0.02876 not normally distributed, use kruskal
+shapiro.test(ssut$Shannon) # p = 0.001398 not normally distributed, use kruskal 
+
+# Testing normality for each site: SIMPSON
+shapiro.test(sscrrel$Simpson) # p = 0.03035 # use kruskal to evaluate 
+shapiro.test(ssfl$Simpson) # p = 0.00119 # use kruskal
+shapiro.test(ssut$Simpson) # p = 3.407e-05 not normally distributed, use kruskal
+```
+Testing for differences pre-post thaw across sites
+```{r}
+# Shannon by thaw
+kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
+kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups # to get significance codes
+```
+
+
+B. Test for differences between pre and post thaw samples from the same site SHANNON
+```{r}
+# ANOVA for CRREL SHANNON
+crrelanova <- aov(Shannon ~ pre_post_thaw, data = sscrrel)
+print(crrelanova)
+
+# Estimated effects may be unbalanced
+table(sscrrel$pre_post_thaw)
+# run test for homogeneity of variance
+library(car)
+leveneTest(Shannon ~ pre_post_thaw, data = sscrrel) #indicates that homogenetiy of variances is met and we can proceed with anova
+
+# Run shapiro to check normality of residuals
+shapiro.test(resid(crrelanova))  # Shapiro-Wilk test, p-value indicates that residuals are normal
+
+# Visualize
+qqnorm(resid(crrelanova))
+qqline(resid(crrelanova))
+hist(resid(crrelanova), main = "Histogram of Residuals", breaks = 10)
+
+summary(crrelanova)
+TukeyHSD(crrelanova)
+
+# Obtain significance codes for CRREL Shannon
+# Extract p-value from ANOVA summary
+crrel_anova_summary <- summary(crrelanova)
+crrel_p_value <- crrel_anova_summary[[1]]$`Pr(>F)`[1]  # Extract p-value
+
+```
+```{r}
+# Running Kruskal wallis on the rest of the sites since their Shannon was not normally distributed
+
+# Farmers Loop shannon
+kruskal.test(ssfl$Shannon ~ pre_post_thaw, data = ssfl) #Kruskal-Wallis chi-squared = 2.0408, df = 1, p-value = 0.1531
+# Extract p-value from the Kruskal-Wallis test result
+fl_p_value <- kruskal_result$p.value
+
+# Function to assign significance codes
+get_significance_code <- function(p) {
+  if (p < 0.001) return("***")
+  else if (p < 0.01) return("**")
+  else if (p < 0.05) return("*")
+  else return("ns")  # Not significant
+}
+
+# Get significance code for the Kruskal-Wallis p-value
+sig_code <- get_significance_code(fl_p_value)
+
+# Create label with p-value and significance code
+kruskal_label <- paste0("p = ", signif(fl_p_value, 3), " ", sig_code)
+print(kruskal_label)  # Example: "p = 0.153 ns"
+
+
+# Utqiagvik shannon
+kruskal.test(ssut$Shannon ~ pre_post_thaw, data = ssut) #Kruskal-Wallis chi-squared = 8.6471, df = 1, p-value = 0.003276
+```
+
+C. Testing for differences pre-post thaw Simpson by site
+```{r}
+# CRREL Simpson
+kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel) # Kruskal-Wallis chi-squared = 8.8167, df = 1, p-value = 0.002985
+
+
+# Farmers Loop Simpson
+kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl) # Kruskal-Wallis chi-squared = 5.898, df = 1, p-value = 0.01516
+
+# Utqiagvik shannon
+kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut) # Kruskal-Wallis chi-squared = 7.4559, df = 1, p-value = 0.006323
+
+
+```
+3. Obtaining average changes in shannon and simpson diversity pre to post thaw with SD
+```{r}
+# Calculate mean Shannon value for each condition
+mean_shannon <- aggregate(Shannon ~ pre_post_thaw, data = sscrrel, mean)
+
+# Compute the difference between conditions
+change_in_shannon <- diff(mean_shannon$Shannon)
+
+# Print results
+print(mean_shannon)  # Mean values for each condition
+print(change_in_shannon)  # Difference in means
+```
+
+Shannon Differences-CRREL
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in CRREL
+crrel_summary_shannon <- sscrrel %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_shannon = mean(Shannon, na.rm = TRUE),
+    se_shannon = sd(Shannon, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+change_in_shannon <- crrel_summary_shannon$mean_shannon[crrel_summary_shannon$pre_post_thaw == "post"] - 
+                     crrel_summary_shannon$mean_shannon[crrel_summary_shannon$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(crrel_summary_shannon$se_shannon^2))
+
+# Print results
+print(crrel_summary_shannon)  # Mean and SE for each condition
+cat("Average change in Shannon value (Post - Pre):", change_in_shannon, "±", se_change, "\n")
+
+```
+Shannon Differences-FL
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in FL
+fl_summary_shannon <- ssfl %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_shannon = mean(Shannon, na.rm = TRUE),
+    se_shannon = sd(Shannon, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+fl_change_in_shannon <- fl_summary_shannon$mean_shannon[fl_summary_shannon$pre_post_thaw == "post"] - 
+                     fl_summary_shannon$mean_shannon[fl_summary_shannon$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(fl_summary_shannon$se_shannon^2))
+
+# Print results
+print(crrel_summary_shannon)  # Mean and SE for each condition
+cat("Average change in Shannon value (Post - Pre):", fl_change_in_shannon, "±", se_change, "\n")
+
+```
+Shannon Differences - UT
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in UT
+UT_summary_shannon <- ssut %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_shannon = mean(Shannon, na.rm = TRUE),
+    se_shannon = sd(Shannon, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+UT_change_in_shannon <- UT_summary_shannon$mean_shannon[UT_summary_shannon$pre_post_thaw == "post"] - 
+                     UT_summary_shannon$mean_shannon[UT_summary_shannon$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(crrel_summary_shannon$se_shannon^2))
+
+# Print results
+print(UT_summary_shannon)  # Mean and SE for each condition
+cat("Average change in Shannon value (Post - Pre):", UT_change_in_shannon, "±", se_change, "\n")
+```
+
+Simpson Differences - CRREL
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in CRREL
+crrel_summary_simpson <- sscrrel %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_simpson = mean(Simpson, na.rm = TRUE),
+    se_simpson = sd(Simpson, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+crrel_change_in_simpson <- crrel_summary_simpson$mean_simpson[crrel_summary_simpson$pre_post_thaw == "post"] - 
+                     crrel_summary_simpson$mean_simpson[crrel_summary_simpson$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(crrel_summary_simpson$se_simpson^2))
+
+# Print results
+print(crrel_summary_simpson)  # Mean and SE for each condition
+cat("Average change in Simpson value (Post - Pre):", crrel_change_in_simpson, "±", se_change, "\n")
+
+
+```
+Simpson Differences - FL
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in CRREL
+fl_summary_simpson <- ssfl %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_simpson = mean(Simpson, na.rm = TRUE),
+    se_simpson = sd(Simpson, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+fl_change_in_simpson <- fl_summary_simpson$mean_simpson[fl_summary_simpson$pre_post_thaw == "post"] - 
+                     fl_summary_simpson$mean_simpson[fl_summary_simpson$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(fl_summary_simpson$se_simpson^2))
+
+# Print results
+print(fl_summary_simpson)  # Mean and SE for each condition
+cat("Average change in Simpson value (Post - Pre):", fl_change_in_simpson, "±", se_change, "\n")
+
+```
+Simpson Differences - UT
+```{r}
+library(dplyr)
+
+# Calculate mean and standard error (SE) for each condition in CRREL
+ut_summary_simpson <- ssut %>%
+  group_by(pre_post_thaw) %>%
+  summarise(
+    mean_simpson = mean(Simpson, na.rm = TRUE),
+    se_simpson = sd(Simpson, na.rm = TRUE) / sqrt(n())  # Standard Error (SE)
+  )
+
+# Compute difference in means
+ut_change_in_simpson <- ut_summary_simpson$mean_simpson[ut_summary_simpson$pre_post_thaw == "post"] - 
+                     ut_summary_simpson$mean_simpson[ut_summary_simpson$pre_post_thaw == "pre"]
+
+# Compute combined standard error (SE) using SE formula for difference of two means
+se_change <- sqrt(sum(ut_summary_simpson$se_simpson^2))
+
+# Print results
+print(ut_summary_simpson)  # Mean and SE for each condition
+cat("Average change in Simpson value (Post - Pre):", ut_change_in_simpson, "±", se_change, "\n")
+
+```
+
+```{r}
+# Function to assign significance codes CRREL
+get_significance_code <- function(p) {
+  if (p < 0.001) return("***")
+  else if (p < 0.01) return("**")
+  else if (p < 0.05) return("*")
+  else return("ns")  # Not significant
+}
+
+# Get significance code
+sig_code <- get_significance_code(crrel_p_value)
+
+# Create label with p-value and significance code
+crrel_anova_label <- paste0("p = ", signif(p_value, 3), " ", sig_code)
+print(anova_label)  # Example output: "p = 0.035 *"
+
+
+# FL
+
+
+
+
+# UT
+```
+
+# Get significance code
+sig_code <- get_significance_code(crrel_p_value)
+
+# Create label with p-value and significance code
+crrel_anova_label <- paste0("p = ", signif(p_value, 3), " ", sig_code)
+print(anova_label)  # Example output: "p = 0.035 *"
+
+
+
+
+C1. Plotting data for publication (manuvering around legend re-ordering)--MOVE this later
+```{r}
+
+library(dplyr)
+
+
+# Make a copy of the original dataframe
+shansimp.meta1 <- as.data.frame(shansimp.meta)
+
+# Rename the column 'pre_post_thaw' to 'thaw_type'
+colnames(shansimp.meta1)[colnames(shansimp.meta1) == "pre_post_thaw"] <- "thaw_type"
+
+# Replace 'pre_thaw' with 'no_thaw' and 'post_thaw' with 'thaw'
+shansimp.meta2 <- shansimp.meta1 %>%
+  mutate(thaw_type = recode(thaw_type, "pre" = "no_thaw", "post" = "thaw"))
+
+# Now that this is changed, we can plot 
+ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
+  geom_boxplot() + 
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
+  theme(text = element_text(size = 12)) 
+
+# Repeat above code with simpson diversity
+
+ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
+  geom_boxplot() +
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
+  theme(text = element_text(size =12))
+
+```
+
+4. Shannon and Simpson figure for publication
+
+```{r}
+# for publicaiton and matching aesthetics
+# Define custom colors for thaw_type
+thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
+
+# Shannon Diversity Plot
+ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
+  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  # Custom colors
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  theme(text = element_text(size = 12))
+
+# Simpson Diversity Plot
+ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  
+  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  theme(text = element_text(size =12))
+```
+
+```{r}
+# Facet wrap
+# Reshape data to long format for faceting
+library(tidyr)
+library(ggplot2)
+
+shansimp_long <- shansimp.meta2 %>%
+  pivot_longer(cols = c(Shannon, Simpson), 
+               names_to = "Diversity_Metric", 
+               values_to = "Value")
+
+# Define custom colors
+thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
+
+# Create faceted plot
+ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  # Add jittered points
+  scale_color_manual(values = thaw_colors, labels = c('Pre-thaw', 'Post-thaw')) +  
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +  # Separate facets for Shannon and Simpson
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment") # Change legend title
+
+```
+
+
+OLD CODE
 ```{r}
 # coding to reorder pre and post in the boxplot figure 
 # what you might have to do is work with the shan simp file instead of the phyloseq object and then use ggplot with 
@@ -259,287 +753,49 @@ plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + 
 ```
 
 
-
-
-
-A. Obtain metrics
-```{r}
-# Creating a table of Simpson and Shannon diversity and run stats
-shan.simp <- as.data.frame(shansimp)
-
-# Add metadata to this dataframe
-metadata_df <- as.data.frame(sample_data(thaw))
-shansimp.meta <- merge(metadata_df, shan.simp, by = "row.names", all.x = TRUE)
-
-# Rename the first column after the merge
-#colnames(shansimp.meta)[1] <- "sample_ID"
-
-# View the merged dataframe
-head(shansimp.meta)
-
-# Save the table as a CSV file
-#write.csv(shansimp.meta, "~/GitHub/thaw.response/Data/thaw_diversity_metrics.csv", row.names = FALSE)
-
-```
-B. Check for normality
-```{r}
-# Before running stats, check to see if data is normally distributed
-# Checking normal distribution: SHANNON
-hist(shansimp.meta$Shannon, main = "Shannon index", xlab = "")
-shapiro.test(shansimp.meta$Shannon) # not normally distributed W = 0.89436, p-value = 0.0008473
-
-# Checking normal distribution: SIMPSON
-hist(shansimp.meta$Simpson, main = "Simpson index", xlab = "")
-shapiro.test(shansimp.meta$Simpson) # not normally distributed W = 0.57395, p-value = 5.77e-10
-```
-
-C. Testing for differences in Shannon and Simpson by site
-```{r}
-# Check to see if Shannon differs significantly between sites regardless of treatment
-# Recall that Shannon is not normally distributed
-kruskal.test(shansimp.meta$Shannon ~ site, data = shansimp.meta)
-dunnTest(shansimp.meta$Shannon ~ site, data = shansimp.meta)
-
-# Check to see if Simpson differs significantly between sites
-kruskal.test(shansimp.meta$Simpson ~ site, data = shansimp.meta)
-dunnTest(shansimp.meta$Simpson ~ site, data = shansimp.meta)
-```
-
-```{r}
-library(dplyr)
-
-shansimp.meta1 <- shansimp.meta  # Make a copy of the original dataframe
-
-# Rename the column 'pre_post_thaw' to 'thaw_type'
-colnames(shansimp.meta1)[colnames(shansimp.meta1) == "pre_post_thaw"] <- "thaw_type"
-
-# Replace 'pre_thaw' with 'no_thaw' and 'post_thaw' with 'thaw'
-shansimp.meta2 <- shansimp.meta1 %>%
-  mutate(thaw_type = recode(thaw_type, "pre" = "no_thaw", "post" = "thaw"))
-
-# Now that this is changed, we can plot 
-ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
-  geom_boxplot() + 
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
-  theme(text = element_text(size = 12)) 
-
-# Repeat above code with simpson diversity
-
-ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
-  geom_boxplot() +
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  scale_color_discrete("Treatment", labels=c('Pre-thaw', 'Post-thaw')) +
-  theme(text = element_text(size =12))
-```
-
-
-```{r}
-# for publicaiton and matching aesthetics
-# Define custom colors for thaw_type
-thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
-
-# Shannon Diversity Plot
-ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
-  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
-  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  # Custom colors
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  theme(text = element_text(size = 12))
-
-# Simpson Diversity Plot
-ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  
-  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  
-  scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  theme(text = element_text(size =12))
-```
-```{r}
-# Facet wrap
-# Reshape data to long format for faceting
-library(tidyr)
-library(ggplot2)
-
-shansimp_long <- shansimp.meta2 %>%
-  pivot_longer(cols = c(Shannon, Simpson), 
-               names_to = "Diversity_Metric", 
-               values_to = "Value")
-
-# Define custom colors
-thaw_colors <- c("no_thaw" = "#1b9e77", "thaw" = "#d95f02")  
-
-# Create faceted plot
-ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
-  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  # Add jittered points
-  scale_color_manual(values = thaw_colors, labels = c('Pre-thaw', 'Post-thaw')) +  
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  facet_wrap(~Diversity_Metric, scales = "free_y") +  # Separate facets for Shannon and Simpson
-  theme(text = element_text(size = 12))
-
-```
-
-C. Subset Shannon and Simpson by site
-```{r}
-# Subset data by site and check for normality
-sscrrel <- subset(shansimp.meta, site =="CRREL")
-ssfl <- subset(shansimp.meta, site =="FL")
-ssut <- subset(shansimp.meta, site =="Utqiagvik")
-
-# Testing normality for each site: SHANNON
-shapiro.test(sscrrel$Shannon) # p = 0.9954 normally distributed, use anova 
-shapiro.test(ssfl$Shannon) # p = 0.02876 not normally distributed, use kruskal
-shapiro.test(ssut$Shannon) # p = 0.001398 not normally distributed, use kruskal 
-
-# Testing normality for each site: SIMPSON
-shapiro.test(sscrrel$Simpson) # p = 0.03035 # use kruskal to evaluate 
-shapiro.test(ssfl$Simpson) # p = 0.00119 # use kruskal
-shapiro.test(ssut$Simpson) # p = 3.407e-05 not normally distributed, use kruskal
-```
-
-
-D. Min and Max values for Shannon and Simpson
-```{r}
-# Load dplyr for grouping and summarizing the data
-library(dplyr)
-
-# Calculate min and max Shannon by treatment
-shannon_by_treatment <- shansimp.meta %>%
-  group_by(pre_post_thaw) %>%
-  summarise(
-    min_shannon = min(Shannon),
-    max_shannon = max(Shannon)
-  )
-
-# Calculate min and max Simpson by treatment
-simpson_by_treatment <- shansimp.meta %>%
-  group_by(pre_post_thaw) %>%
-  summarise(
-    min_simpson = min(Simpson),
-    max_simpson = max(Simpson)
-  )
-
-# Print the results
-print(shannon_by_treatment)
-print(simpson_by_treatment)
-```
-E. Mean and SD for Shannon and Simpson
-```{r}
-# Obtain average Shannon values for each site with SD
-# Load dplyr for data manipulation
-library(dplyr)
-
-# Calculate min, max, and standard error for Shannon by site
-shannon_by_site <- shansimp.meta %>%
-  group_by(site) %>%
-  summarise(
-    avg_shannon = mean(Shannon),
-    se_shannon = sd(Shannon) / sqrt(n())
-  )
-
-# Calculate min, max, and standard error for Simpson by site
-simpson_by_site <- shansimp.meta %>%
-  group_by(site) %>%
-  summarise(
-    avg_simpson = mean(Simpson),
-    se_simpson = sd(Simpson) / sqrt(n())
-  )
-
-# Print the results
-print(shannon_by_site)
-print(simpson_by_site)
-
-```
-
-```{r}
-
-```
-
-```{r}
-# Shannon by site
-kruskal.test(ssmeta$Shannon ~ site, data = ssmeta)# chi-squared = 13.765, df = 2, p-value = 0.001026
-kruskal(ssmeta$Shannon, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups #using this to get the letter significance codes 
-dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
-
-# Shannon by pre thaw 
-kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
-kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups # to get significance codes
-
-# Shannon by pre- post-thaw by site 
-# CRREL
-kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
-kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, site == "CRREL", group=TRUE, p.adj="bonferroni") #$groups
-
-# Farmers Loop 
-kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
-
-# Utqiagvik
-kruskal.test(ssmeta$Shannon ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
-
-# Subsetting by site manually 
-crrel_ss <- subset(ssmeta,subset =  site == "CRREL")
-kruskal.test(crrel_ss$Shannon ~ pre_post_thaw, data = crrel_ss)
-
-#dunnTest(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) 
-```
-
-
-
-
+Beta dispersion analysis: Permutest
 ```{r}
 # Working with distance matrices 
 # Creating a bray curtis distance matrix from our phyloseq object
-dist.bc <- distance(dorm1rarefied, method = "bray")
+dist.bc <- distance(thaw, method = "bray")
 print(dist.bc)
-# Unifrac
-dist.uf <- distance(dorm1rarefied, method = "unifrac")
-ord <- ordinate(dorm1rarefied, method = "MDS", distance = "bray")
+
 # Visualize
-plot_ordination(dorm1rarefied, ord, color = "site", shape = "pre_post_thaw") +
+plot_ordination(thaw, ord, color = "site", shape = "pre_post_thaw") +
   stat_ellipse(aes(group = site))
+
 # Calculate bray curtis distance matrix
-dorm_bray <- phyloseq::distance(dorm1rarefied, method = "bray")
+thaw_bray <- phyloseq::distance(thaw, method = "bray")
 
 # Making a data frame from the phyloseq object 
-dormOTU <- dorm1rarefied_OTU %>%
+thawOTU <- thaw@otu_table %>%
   data.frame()
 
 # Saving matrix
 # write.csv(dormOTU,"~/Desktop/dormOTU.csv")
 
 # Need to transform so species are columns and samples are rows (for vegan)
-dormOTUtransform <- t(sqrt(dormOTU))
-dorm_bray <- vegdist(dormOTUtransform, method = "bray")
+thawOTUtransform <- t(sqrt(thawOTU))
+thawOTU_bray <- vegdist(thawOTUtransform, method = "bray")
 
 # Make a data frame from the sample_data
-# sampledf <- data.frame(sample_data(dorm1rarefied))
+sampledf <- data.frame(sample_data(thaw))
 
 # Adonis test (PERMANOVA)
-# adonis(dorm_bray ~ pre_post_thaw, data = sampledf)
+adonis(thawOTU_bray ~ pre_post_thaw, data = sampledf)
 
 # Homogeneity of dispersion test for site
-beta <- betadisper(dorm_bray, dorm1rarefied_sam_data$site) # testing the dispersion between groups (sites)
+beta <- betadisper(thawOTU_bray, thaw@sam_data$site) # testing the dispersion between groups (sites)
 print(beta) # dispersion is how scattered the points are
 
-adonis2(dorm_bray ~ site, data=datadorm)
+#adonis2(thawOTU_bray ~ site, data=datadorm)
 
 # Homogeneity of dispersion test for core
-beta_core <- betadisper(dorm_bray, dorm1rarefied_sam_data$core)
+beta_core <- betadisper(thawOTU_bray, thaw@sam_data$core)
 print(beta_core)
 
 # Homogeneity of dispersion test for pre post thaw 
-beta_pp <- betadisper(dorm_bray, dorm1rarefied_sam_data$pre_post_thaw)
+beta_pp <- betadisper(thawOTU_bray, thaw@sam_data$pre_post_thaw)
 print(beta_pp)
 # Are these distances (dispersion/distance to the median) significant?
 
@@ -547,7 +803,7 @@ print(beta_pp)
 permutest(beta)
 
 # Core 
-# permutest(beta_core)
+permutest(beta_core)
 
 # Pre post thaw 
 permutest(beta_pp)
@@ -625,20 +881,7 @@ for (i in 1:100) {
 
 
 ```{r}
-# Simpson pre post thaw by site (obtaining the significance codes)
 
-# CRREL
-kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel)
-kruskal(sscrrel$Simpson, sscrrel$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
-# FL
-kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl)
-kruskal(ssfl$Simpson, ssfl$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
-# Utqiagvik 
-kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut)
-kruskal(ssut$Simpson, ssut$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
-# Simpson by site 
-kruskal.test(ssmeta$Simpson ~ site, data = ssmeta) # chi-squared = 9.5593, df = 2, p-value = 0.008399
-dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
 
 # Using the base Kruskal test we find that it's the same as above with the FSA package Kruskal test 
 #stats::kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
@@ -653,15 +896,7 @@ dunnTest(ssmeta$Simpson ~ site, data = ssmeta)
 kruskal.test(ssmeta$Simpson ~ pre_post_thaw, data = ssmeta) #chi-squared = 18.564, df = 1, p-value = 1.643e-05
 kruskal(ssmeta$Simpson, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups
 
-# Simpson by pre-post thaw by site 
-# CRREL
-kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "CRREL", data = ssmeta) # chi-squared = 6.5455, df = 1, p-value = 0.01052
 
-# FL
-kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "FL", data = ssmeta) # chi-squared = 6, df = 1, p-value = 0.01431
-
-# Utqiagvik
-kruskal.test(ssmeta$Simpson ~ pre_post_thaw, site == "Utqiagvik", data = ssmeta) # chi-squared = 8.0769, df = 1, p-value = 0.004483
 ```
 
 
@@ -691,8 +926,6 @@ plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_p
   scale_color_discrete("Treatment")
 ```
 
-
-```
 
 
 Extra code that was not used:
