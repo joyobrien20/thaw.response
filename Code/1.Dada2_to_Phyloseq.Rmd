@@ -190,6 +190,355 @@ dm_thaw_mat <- as.matrix(dm_thaw)
 thaw.nmds <- metaMDS(dm_thaw, k = 2, trymax = 1500) ## "k" is the number of axes, sometimes 2 is not enough, "trymax" is the number of times it tries to find solutions
 print(thaw.nmds)
 plot(thaw.nmds)
+
+```
+Exploring PCoA plot instead of nmds
+```{r}
+# Transform the OTU table 
+thaw_transformed <- t(sqrt(otu.rarify.table))
+
+# Create a distance matrix using vegan and bray
+dm_thaw <- vegdist(thaw_transformed, method = "bray")
+
+thaw.pcoa <- ordinate(thaw.rarify, method = "PCoA", distance = dm_thaw)
+print(thaw.pcoa)
+
+
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"), name = "Site") +  # Custom colors for site
+  scale_shape_discrete("Treatment") +
+  scale_shape_manual("Treatment", labels = c("Pre-thaw", "Post-thaw"), values = c(2, 1))
+```
+```{r}
+# Changing the points so there are open and closed circle
+# Making sure the legend will show pre before post
+sample_data(thaw.rarify)$pre_post_thaw <- factor(
+  sample_data(thaw.rarify)$pre_post_thaw,
+  levels = c("pre", "post")  
+)
+
+# Extracting variance explained
+
+eigvals <- thaw.pcoa$values$Relative_eig
+
+
+x_var <- round(eigvals[1] * 100, 1)
+y_var <- round(eigvals[2] * 100, 1)
+
+
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+scale_shape_manual(
+  name = "Treatment",
+  values = c("pre" = 1, "post" = 16),  # 1 = open circle, 16 = filled circle
+  labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+) +
+      labs(
+    x = paste0("PCoA1 (", x_var, "%)"),
+    y = paste0("PCoA2 (", y_var, "%)"))
+
+
+
+# Now connect paired samples with dotted lines
+
+```
+```{r}
+
+library(dplyr)
+library(tidyr)
+# Plotting again with dotted lines to connect the pre and post 
+ordination_scores <- as.data.frame(thaw.pcoa$vectors)
+ordination_scores$SampleID <- rownames(ordination_scores)
+ordination_scores$Treatment <- sample_data(thaw.rarify)$pre_post_thaw
+ordination_scores$Site <- sample_data(thaw.rarify)$site
+
+# If you have a variable to match pre/post pairs (e.g. `core_id`), add it:
+ordination_scores$sample_id <- sample_data(thaw.rarify)$sample_id
+
+library(dplyr)
+
+line_segments <- ordination_scores %>%
+  select(SampleID, SampleID, Treatment, Axis.1, Axis.2) %>%
+  pivot_wider(names_from = Treatment, values_from = c(Axis.1, Axis.2)) %>%
+  drop_na()  # Remove any incomplete pairs
+
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  # Dotted lines connecting pre/post
+  geom_segment(
+  data = line_segments,
+  aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
+  linetype = "dotted", color = "gray50", size = 0.5,
+  inherit.aes = FALSE
+) +
+  # Points
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+  scale_shape_manual(
+    name = "Treatment",
+    values = c("pre" = 1, "post" = 16),
+    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+  )
+
+view(sample_data(thaw.rarify)[, c("pre_post_thaw", "core")])
+view(line_segments)
+
+table(sample_data(thaw.rarify)$pre_post_thaw)
+anyDuplicated(sample_data(thaw.rarify)$core)
+
+```
+```{r}
+# Extract sample coordinates from the PCoA object
+ordination_scores <- as.data.frame(thaw.pcoa$vectors)
+ordination_scores$sample_ID <- rownames(ordination_scores)
+
+# Extract metadata
+metadata <- data.frame(sample_data(thaw.rarify))
+metadata$sample_ID <- rownames(metadata)
+
+# Merge scores with metadata
+ordination_scores <- left_join(ordination_scores, metadata, by = "sample_ID")
+
+library(dplyr)
+library(tidyr)
+
+line_segments <- ordination_scores %>%
+  filter(pre_post_thaw %in% c("pre", "post")) %>%
+  select(core, pre_post_thaw, Axis.1, Axis.2) %>%
+  pivot_wider(
+    names_from = pre_post_thaw,
+    values_from = c(Axis.1, Axis.2),
+    names_sep = "_"
+  ) %>%
+  drop_na()
+
+colnames(ordination_scores)
+
+
+head(line_segments)
+
+
+ordination_scores %>%
+  count(core, pre_post_thaw) %>%
+  filter(n > 1)
+
+
+library(dplyr)
+library(tidyr)
+
+# Summarize to one row per core per pre/post thaw group
+line_segments <- ordination_scores %>%
+  filter(pre_post_thaw %in% c("pre", "post")) %>%
+  group_by(core, pre_post_thaw) %>%
+  summarize(
+    Axis.1 = mean(Axis.1),
+    Axis.2 = mean(Axis.2),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = pre_post_thaw,
+    values_from = c(Axis.1, Axis.2),
+    names_sep = "_"
+  ) %>%
+  drop_na()  # drops rows missing either pre or post coords
+
+
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  # Dotted lines connecting pre/post
+  geom_segment(
+  data = line_segments,
+  aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
+  linetype = "dotted", color = "gray50", size = 0.5,
+  inherit.aes = FALSE
+) +
+  # Points
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+  scale_shape_manual(
+    name = "Treatment",
+    values = c("pre" = 1, "post" = 16),
+    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+  )
+
+
+```
+Okay so the above code shows the lines by core 
+but we want to connect lines to inidivudal samples
+```{r}
+library(dplyr)
+library(tidyr)
+library(phyloseq)
+library(ggplot2)
+
+# 1. Extract ordination scores from your PCoA object
+ordination_scores <- as.data.frame(thaw.pcoa$vectors)
+ordination_scores$sample_ID <- rownames(ordination_scores)
+
+# 2. Extract metadata from phyloseq
+metadata <- data.frame(sample_data(thaw.rarify))
+metadata$sample_ID <- rownames(metadata)
+
+# 3. Merge ordination scores with metadata
+ordination_scores <- left_join(ordination_scores, metadata, by = "sample_ID")
+
+# 4. Create a cleaned pair_ID by removing the pre/post suffix from sample_ID
+#    Adjust regex to your sample ID naming pattern as needed
+ordination_scores <- ordination_scores %>%
+  mutate(pair_ID = gsub("_(PRE|POST).*", "", sample_ID),
+         pre_post_thaw = tolower(pre_post_thaw))  # just in case pre_post_thaw is mixed case
+
+# 5. Pivot to get pre and post sample coordinates side-by-side for line plotting
+line_segments <- ordination_scores %>%
+  select(pair_ID, pre_post_thaw, Axis.1, Axis.2) %>%
+  pivot_wider(names_from = pre_post_thaw, values_from = c(Axis.1, Axis.2)) %>%
+  drop_na()  # drop pairs where either pre or post is missing
+
+# 6. Plot using plot_ordination + ggplot, adding geom_segment to connect pairs
+
+# Base ordination plot with default data (phyloseq)
+base_plot <- plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+)
+
+# Add the segments and points layers explicitly specifying data and mappings
+base_plot +
+  geom_segment(
+    data = line_segments,
+    aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
+    linetype = "dotted", color = "black", inherit.aes = FALSE
+  ) +
+  geom_point(alpha = 0.7, size = 4) +  # inherits color and shape from base_plot
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+  scale_shape_manual(
+    name = "Treatment",
+    values = c("pre" = 1, "post" = 16, stroke = 1),
+    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+  )
+```
+```{r}
+base_plot +
+  geom_segment(
+    data = line_segments,
+    aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
+    linetype = "dotted", color = "black", inherit.aes = FALSE
+  ) +
+  geom_point(size = 3, alpha = 0.9) +  # Single point layer
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+  scale_shape_manual(
+    name = "Treatment",
+    values = c("pre" = 1, "post" = 16),  # Shape 1 = open circle, 16 = filled
+    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+  )
+
+```
+
+
+```{r}
+plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+) +
+  geom_segment(data = line_segments,
+               aes(x = Axis.1_pre, y = Axis.2_pre,
+                   xend = Axis.1_post, yend = Axis.2_post),
+               linetype = "dotted", color = "black") +
+  geom_point(aes(color = site), alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
+    name = "Site"
+  ) +
+  scale_shape_manual(
+    name = "Treatment",
+    values = c("pre" = 1, "post" = 16),
+    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
+  )
+
+
+
+
+
+
 ```
 
 

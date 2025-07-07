@@ -1,0 +1,1047 @@
+---
+title: "Thaw responder analysis"
+author: "Joy O'Brien"
+date: "2025-05-02"
+output: html_document
+---
+Need to fix/know: Are we working with C.ASVs? 
+
+Thaw response code (response ratio analysis code from Hannah Holland-Moritz, modeled and modified from the following publication: Fan, K., Holland-Moritz, H., Walsh, C., Guo, X., Wang, D., Bai, Y., Zhu, Y., Fierer, N. & Chu, H. (2022). 
+# Identification of the rhizosphere microbes that actively consume plant-derived carbon. Soil Biology and Biochemistry, 166, 108577. 
+# https://doi.org/10.1016/j.soilbio.2022.108577)
+1. Set working directory
+```{r setup, include=FALSE}
+setwd("~/GitHub/thaw.response")
+```
+2. Load libraries
+```{r}
+# Load the necessary libraries
+#install.packages("mctoolsr")
+#library(mctoolsr)
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(multcompView)
+library(phyloseq)
+library(readxl)
+library(biomformat)
+library(readr)
+library(readxl)
+library(ARPobservation)
+```
+
+Employing Hannah & Jessica's feedback:
+- Make this analysis absolute abundance
+- Take each of the sites--dataframes from each site, stack them together, run code on larger frame (site columm) - top 100 thaw responders from each site, bind rows together
+- Plots will have 3 points for every organism, 1 point represents the response from one organism in one site
+- Color = site , position dodge by site
+
+
+Edit: Calculating absolute abundance
+3. Calculating absolute abundance (copying from script 4)
+```{r}
+thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
+cpnumb <- read_excel("~/GitHub/thaw.response/Data/16Scopy_number.xlsx", sheet = "16S_copy")
+
+# Extract raw OTU count table and make a matrix
+otu_table <- as.data.frame(thaw@otu_table)
+otu_mat <- as.matrix(otu_table)
+
+# Extract qPCR copy numbers into a named vector
+qPCR_vec <- setNames(cpnumb$copy_numb_gsoil, cpnumb$Sample_ID)
+
+# Match the sample order to OTU matrix columns
+qPCR_vec <- qPCR_vec[colnames(otu_mat)]
+
+# Calculate total sequencing reads per sample
+total_reads <- colSums(otu_mat)
+
+# Calculate scaling factors
+scaling_factors <- qPCR_vec / total_reads
+
+# Multiply each column (sample) in the OTU matrix by its scaling factor
+otu_abs_abund <- sweep(otu_mat, 2, scaling_factors, FUN = "*") # we get some NAs here because samples are missing 
+# we do not get nas here
+```
+
+3A. Checking out the samples that have NA
+```{r}
+# Checking the potential error / mismatch 
+# Sample names in OTU table
+otu_samples <- colnames(otu_mat)
+
+# Sample names in qPCR data
+qpcr_samples <- cpnumb$Sample_ID
+
+# Find which OTU samples are missing in qPCR
+missing_in_qpcr <- otu_samples[!otu_samples %in% qpcr_samples]
+
+# Also check the reverse: which qPCR samples aren't in OTU table
+missing_in_otu <- qpcr_samples[!qpcr_samples %in% otu_samples]
+
+# Print to investigate
+missing_in_qpcr
+missing_in_otu
+```
+
+```{r}
+# # scaling_factors came from: qPCR_vec / total_reads
+# na_samples <- names(scaling_factors)[is.na(scaling_factors)]
+# na_samples
+# 
+# # Removing NA samples from all dataframes
+# otu_mat      <- otu_mat[ , !colnames(otu_mat)      %in% na_samples]
+# total_reads  <- total_reads[ !names(total_reads)   %in% na_samples]
+# qPCR_vec     <- qPCR_vec[  !names(qPCR_vec)        %in% na_samples]
+# 
+# scaling_factors <- qPCR_vec / total_reads          # now no NAs
+
+otu_abs_abund   <- sweep(otu_mat, 2, scaling_factors, FUN = "*")
+
+# Obtain sample names
+names(qPCR_vec)
+names(total_reads)  
+
+# Align by intersecting names
+shared_samples <- intersect(names(qPCR_vec), names(total_reads))
+
+# Subset both to shared samples
+qPCR_vec      <- qPCR_vec[shared_samples]
+total_reads   <- total_reads[shared_samples]
+
+# Now calculate scaling factors
+scaling_factors <- qPCR_vec / total_reads
+
+length(scaling_factors)
+any(is.na(scaling_factors))  # should be FALSE
+
+# Samples in scaling_factors should match the columns in otu_mat
+otu_mat_subset <- otu_mat[, names(scaling_factors)]
+
+# Multiply each sample column by its corresponding scaling factor
+absolute_otu <- sweep(otu_mat_subset, 2, scaling_factors, `*`)
+# Now we have absolute OTU without NA
+
+```
+
+
+
+4. Make df from phyloseq object
+```{r}
+# Load data
+#thaw <- read_rds("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
+thaw.meta <- read_rds("~/GitHub/thaw.response/Data/thaw_metadata_phyloseq.rds")
+thaw_OTU_phyloseq <- read_rds("~/GitHub/thaw.response/Data/thaw_OTU_phyloseq.rds")
+thaw_tax <- read_rds("~/GitHub/thaw.response/Data/thaw_tax_phyloseq.rds")
+thaw_response <- thaw_OTU_phyloseq %>%
+  data.frame()
+
+# We are going to scale each OTU count up by 0.01 so that 0 becomes 0.01 and the relationship stays the same
+#thaw_response <- absolute_otu #+ 0.01 
+thaw_response <- otu_abs_abund + 0.01
+
+# Change the absolute abundance df to otu table object 
+#absolute_matrix <- as.matrix(absolute_otu)
+
+# Convert to an otu_table object
+#otu_abs <- otu_table(absolute_matrix, taxa_are_rows = TRUE)  # Or FALSE if samples are rows
+
+# Incorporating this back into phyloseq object 
+#thaw.abs <- phyloseq(otu_abs,thaw.meta,thaw_tax)
+#abs_OTU_phyloseq <- thaw.abs@otu_table
+#as.data.frame(abs_OTU_phyloseq)
+
+# Create thaw_response based on new abs table
+#thaw.response.abs <- abs_OTU_phyloseq %>%
+ # data.frame()
+
+
+#thaw.response.abs <- thaw.abs@otu_table
+#thaw.response.abs <- as.data.frame(thaw.response.abs) # COME BACK AND PICK UP HERE I DONT KNOW WHY THERE IS CONFUSION
+```
+
+3A. Assessing thaw response (all 3 sites combined and all responders)
+```{r}
+# dont know why i had to remove samples 41 and 42 from the line of number code below 
+ToF <- thaw_response; #changed from thaw_response to thaw.abs
+ToF[ToF > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices <- grep("PRE", names(thaw_response))
+post_col_indices <- grep("POST", names(thaw_response))
+
+pre_col_indices
+post_col_indices
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+ave1 = apply(thaw_response[,c(4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,35,37,39,41,43)],1,mean,na.rm = TRUE);#Control
+ave2 = apply(thaw_response[,c(1,2,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,36,38,40,42)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+sd1 = apply(thaw_response[,c(4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,35,37,39,41,43)],1,sd,na.rm = TRUE);# Control #
+sd2 = apply(thaw_response[,c(1,2,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,36,38,40,42)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1 = apply(ToF[,c(4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,35,37,39,41,43)],1,sum,na.rm = TRUE); #Control#
+num2 = apply(ToF[,c(1,2,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,36,38,40,42)],1,sum,na.rm = TRUE) # Treatment #
+```
+
+3B. Response ratio calculations (all sites)
+```{r}
+# Response ratio calculations
+# Sample variance
+v1 = sd1^2/(ave1^2*num1); # Control #
+v2 = sd2^2/(ave2^2*num2) # treatment #
+
+# Square root of variance 
+sqv = sqrt(v1+v2)
+
+# RR = Response ratio
+RR = log(ave2/ave1)
+```
+
+3C. Confidence interval (all sites)
+```{r}
+# Confidence interval
+
+ICl_R = RR-1.96*sqv
+ICu_R = RR+1.96*sqv
+
+# Error 
+err_R = ICu_R-RR
+
+# Significance
+Sig_R = ICl_R*ICu_R
+Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
+
+R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
+# Create a new column from row names 
+R$ID <- rownames(R)
+
+#selecting rows (ASV's) with significance & values #
+R$Significance <- ifelse(ICl_R > 0 & ICu_R > 0, "Up",
+                   ifelse(ICl_R < 0 & ICu_R < 0, "Down", "Not Significant"))
+
+sig_ASVs <- R[R$Significance != "Not Significant", ]
+
+# Adjust for multiple comparisons 
+z_scores <- RR / sqv
+p_vals <- 2 * pnorm(-abs(z_scores))  # two-tailed test
+p_adj <- p.adjust(p_vals, method = "fdr")
+
+R$p_value <- p_vals
+R$p_adj <- p_adj
+R$Significant_FDR <- p_adj < 0.05
+
+thaw.tax <- as.data.frame(thaw_tax)
+
+tax_response <- left_join(R, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig <- tax_response %>% filter(Significance != "Not Significant")
+
+tax_sig_top <- tax_sig %>%
+  arrange(desc(abs(RR))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+
+```
+4. Significant thaw responders only (from all sites)
+```{r}
+#Significant thaw responders only 
+tax_sig_up <- tax_response %>%
+  filter(Significance == "Up")
+
+top_up <- tax_sig_up %>%
+  arrange(desc(RR)) %>%
+  slice(1:100)  # change 20 to however many you want
+
+ggplot(top_up, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+# Plotting to show the genus
+#ggplot(top_up, aes(x = reorder(Class, RR), y = RR, color = Phylum)) + 
+  #geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  #geom_hline(yintercept = 0, linetype = 2) +
+  #facet_wrap(~Phylum, scales = "free_x") +
+  #theme_bw() +
+  #theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  #labs(x = "Class", y = "Log Response Ratio (Thaw/Post vs Pre)") 
+  
+
+
+# # Significant thaw decliners
+# tax_sig_down <- tax_response %>%
+#   filter(Significance == "Down")
+# 
+# down_up <- tax_sig_down %>%
+#   arrange(desc(RR)) %>%
+#   slice(1:20)  # change 20 to however many you want
+# 
+# ggplot(down_up, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+#   geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+#   geom_hline(yintercept = 0, linetype = 2) +
+#   facet_wrap(~Phylum, scales = "free_x") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+```
+5. Thaw response assessed by site (CRREL)
+```{r}
+# Subset the data out for CRREL sites
+thaw_response <- as.data.frame(thaw_response)
+t.r.crrel <- as.data.frame(thaw_response %>% select(matches("AT3|AT4")))
+ToF_crrel <- t.r.crrel;
+ToF_crrel[ToF_crrel > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices_crrel <- grep("PRE", names(t.r.crrel))
+post_col_indices_crrel <- grep("POST", names(t.r.crrel))
+
+pre_col_indices_crrel
+post_col_indices_crrel
+
+grep("PRE", colnames(t.r.crrel))
+grep("POST", colnames(t.r.crrel))
+
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+ave1_crrel = apply(t.r.crrel[,c(4, 6, 8, 10, 12)],1,mean,na.rm = TRUE);# Control
+ave2_crrel = apply(t.r.crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+sd1_crrel = apply(t.r.crrel[,c(4,6,8,10,12)],1,sd,na.rm = TRUE);# Control #
+sd2_crrel = apply(t.r.crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1_crrel= apply(ToF_crrel[,c(4, 6, 8, 10, 12)],1,sum,na.rm = TRUE); #Control#
+num2_crrel = apply(ToF_crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,sum,na.rm = TRUE) # Treatment #
+
+# Response ratio calculations
+# Sample variance
+v1_crrel = sd1_crrel^2/(ave1_crrel^2*num1_crrel); # Control 
+v2_crrel= sd2_crrel^2/(ave2_crrel^2*num2_crrel) # treatment
+
+# Square root of variance 
+sqv_crrel = sqrt(v1_crrel+v2_crrel)
+
+# RR = Response ratio
+RR_crrel = log(ave2_crrel/ave1_crrel)
+
+# Confidence interval
+
+ICl_R_crrel = RR_crrel-1.96*sqv_crrel
+ICu_R_crrel = RR_crrel+1.96*sqv_crrel
+
+# Error 
+err_R_crrel = ICu_R_crrel-RR_crrel
+
+# Significance
+Sig_R_crrel = ICl_R_crrel*ICu_R_crrel
+Sig_adjust_R_crrel <- p.adjust(Sig_R_crrel, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R_crrel = as.data.frame(cbind(RR_crrel,err_R_crrel,Sig_R_crrel, ICl_R_crrel, ICu_R_crrel))
+# Creating data frame adjusted 
+R_adjust_crrel <- as.data.frame(cbind(RR_crrel,err_R_crrel,Sig_adjust_R_crrel, ICl_R_crrel, ICu_R_crrel))
+
+# Create a new column from row names 
+R_crrel$ID <- rownames(R_crrel)
+
+#selecting rows (ASV's) with significance & values #
+R_crrel$Significance <- ifelse(ICl_R_crrel > 0 & ICu_R_crrel > 0, "Up",
+                   ifelse(ICl_R_crrel < 0 & ICu_R_crrel < 0, "Down", "Not Significant"))
+
+sig_ASVs_crrel <- R_crrel %>%
+  filter(Significance != "Not Significant")
+
+
+```
+
+5A. Adjusting for multiple comparisons and subsetting for the top 100 thaw responders (positive and negative)
+```{r}
+# Adjust for multiple comparisons 
+z_scores_crrel <- RR_crrel / sqv_crrel
+p_vals_crrel <- 2 * pnorm(-abs(z_scores_crrel))  # two-tailed test
+p_adj_crrel <- p.adjust(p_vals_crrel, method = "fdr")
+
+R_crrel$p_value <- p_vals_crrel
+R_crrel$p_adj <- p_adj_crrel
+R_crrel$Significant_FDR <- p_adj_crrel < 0.05
+
+thaw.tax <- as.data.frame(thaw_tax)
+tax_response_crrel <- left_join(R_crrel, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig_crrel <- tax_response_crrel %>% filter(Significance != "Not Significant")
+tax_sig_top_crrel <- tax_sig_crrel %>%
+  arrange(desc(abs(RR_crrel))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top_crrel, aes(x = reorder(ID, RR_crrel), y = RR_crrel, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_crrel, ymax = ICu_R_crrel)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+#ggplot(tax_sig_top_crrel %>% slice(1:100), aes(x= ID, y = RR_crrel, color = Phylum)) + 
+  #geom_pointrange(aes(ymin = RR_crrel - err_R_crrel, ymax = RR_crrel + err_R_crrel)) +
+  #geom_hline(yintercept = 0, linetype = 2) +
+  #facet_wrap(~Phylum,scales = "free_x") +
+  #theme_bw() 
+  #theme(axis.text.x = element_text(angle = 70, hjust = 1))
+
+
+
+```
+
+5A. Top thaw responders (positive response) (CRREL) 
+Pick up here- get rid of NA taxa and use these plots in the manuscript for each site
+```{r}
+# Top thaw responders (positive response)
+tax_sig_up_crrel <- tax_response_crrel %>%
+  filter(Significance == "Up")
+
+top_up_crrel <- tax_sig_up_crrel %>%
+  filter(!is.na(Genus)) %>%              # <- Remove NA genera
+  arrange(desc(RR_crrel)) %>%
+  slice(1:100)  # changed to 100
+
+
+crrel_plot <- ggplot(top_up_crrel, aes(x = reorder(Genus, RR_crrel), y = RR_crrel, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_crrel, ymax = ICu_R_crrel), color = "#1b9e77") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, ncol = 3, scales = "free_x") +
+  theme_classic() +
+  theme(
+    strip.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 70, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    legend.position = "none"
+  ) +
+  labs(x = "Genus", y = "Log Response Ratio")
+
+
+  
+ggsave("~/GitHub/thaw.response/Figures/crrel_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
+# # Top thaw decliners (negative response)
+# tax_sig_down_crrel <- tax_response_crrel %>%
+#   filter(Significance == "Down")
+# 
+# down_up_crrel <- tax_sig_down_crrel %>%
+#   arrange(desc(RR_crrel)) %>%
+#   slice(1:100)  # change 20 to however many you want
+# 
+# ggplot(down_up_crrel, aes(x = reorder(ID, RR_crrel), y = RR_crrel, color = Phylum)) + 
+#   geom_pointrange(aes(ymin = ICl_R_crrel, ymax = ICu_R_crrel)) +
+#   geom_hline(yintercept = 0, linetype = 2) +
+#   facet_wrap(~Phylum, scales = "free_x") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+```
+
+# Take these top 100 and add to larger dataframe
+- top_up_crrel
+- top_up_fl
+- top_up_ut
+
+
+
+
+
+6. Assessing thaw response by site (Farmer's Loop FL)
+```{r}
+# Subset the data out for FL sites
+t.r.fl <- as.data.frame(thaw_response %>% select(matches("FL2C3|FL1C4")))
+ToF_fl <- t.r.fl;
+ToF_fl[ToF_fl > 0] <- 1 #anything above 0 is 1 (Presence absence table)
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices_fl <- grep("PRE", names(t.r.fl))
+post_col_indices_fl <- grep("POST", names(t.r.fl))
+
+pre_col_indices_fl
+post_col_indices_fl
+```
+
+6A. Farmer's Loop thaw response (positive and negative)
+```{r}
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+ave1_fl = apply(t.r.fl[,c(2, 4, 5, 7, 9, 11, 13)],1,mean,na.rm = TRUE);# Control
+ave2_fl = apply(t.r.fl[,c(1, 3, 6, 8, 10, 12)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+sd1_fl = apply(t.r.fl[,c(2, 4, 5,7, 9, 11, 13)],1,sd,na.rm = TRUE);# Control #
+sd2_fl = apply(t.r.fl[,c(1, 3, 6, 8, 10, 12)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1_fl= apply(ToF_fl[,c(2, 4, 5,7, 9, 11, 13)],1,sum,na.rm = TRUE); #Control#
+num2_fl = apply(ToF_fl[,c(1, 3, 6, 8, 10, 12)],1,sum,na.rm = TRUE) # Treatment #
+
+
+# Response ratio calculations
+# Sample variance
+v1_fl = sd1_fl^2/(ave1_fl^2*num1_fl); # Control 
+v2_fl= sd2_fl^2/(ave2_fl^2*num2_fl) # treatment
+
+# Square root of variance 
+sqv_fl = sqrt(v1_fl+v2_fl)
+
+# RR = Response ratio
+RR_fl = log(ave2_fl/ave1_fl)
+
+
+# Confidence interval
+
+ICl_R_fl = RR_fl-1.96*sqv_fl
+ICu_R_fl = RR_fl+1.96*sqv_fl
+
+# Error 
+err_R_fl = ICu_R_fl-RR_fl
+
+# Significance
+Sig_R_fl = ICl_R_fl*ICu_R_fl
+Sig_adjust_R_fl <- p.adjust(Sig_R_fl, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R_fl = as.data.frame(cbind(RR_fl,err_R_fl,Sig_R_fl, ICl_R_fl, ICu_R_fl))
+
+R_adjust_fl <- as.data.frame(cbind(RR_fl,err_R_fl,Sig_adjust_R_fl, ICl_R_fl, ICu_R_fl))
+# Create a new column from row names 
+R_fl$ID <- rownames(R_fl)
+
+#selecting rows (ASV's) with significance & values #
+R_fl$Significance <- ifelse(ICl_R_fl > 0 & ICu_R_fl > 0, "Up",
+                   ifelse(ICl_R_fl < 0 & ICu_R_fl < 0, "Down", "Not Significant"))
+
+sig_ASVs_fl <- R[R_fl$Significance_fl != "Not Significant", ]
+
+# Adjust for multiple comparisons 
+# Adjust for multiple comparisons 
+z_scores_fl <- RR_fl / sqv_fl
+p_vals_fl <- 2 * pnorm(-abs(z_scores_fl))  # two-tailed test
+p_adj_fl <- p.adjust(p_vals_fl, method = "fdr")
+
+R_fl$p_value <- p_vals_fl
+R_fl$p_adj <- p_adj_fl
+R_fl$Significant_FDR <- p_adj_fl < 0.05
+
+tax_response_fl <- left_join(R_fl, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig_fl <- tax_response_fl %>% filter(Significance != "Not Significant")
+
+tax_sig_top_fl <- tax_sig_fl %>%
+  arrange(desc(abs(RR_fl))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top_fl, aes(x = reorder(ID, RR_fl), y = RR_fl, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_fl, ymax = ICu_R_fl)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+# Take the top 100 sig fl thaw responders 
+
+```
+6B. Top thaw responders (FL Farmer's Loop)
+```{r}
+# Top thaw responders (positive response)
+tax_sig_up_fl <- tax_response_fl %>%
+  filter(Significance == "Up")
+
+# obtaining the top 100 by the highest response ratio
+top_up_fl <- tax_sig_up_fl %>%
+    filter(!is.na(Genus)) %>%  # removing data with NA at the genus level (for plotting)
+  arrange(desc(RR_fl)) %>%
+  slice(1:100)  # changed to 100
+
+fl_plot <- ggplot(top_up_fl, aes(x = reorder(Genus, RR_fl), y = RR_fl, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_fl, ymax = ICu_R_fl), color = "#d95f02") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, ncol = 3, scales = "free_x") +
+  theme_classic() +
+    theme(
+    strip.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 70, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    legend.position = "none"
+  ) +
+  labs(x = "Genus", y = "Log Response Ratio")
+  
+ggsave("~/GitHub/thaw.response/Figures/fl_top100plot.png", width = 16.5, height = 12, units = "in", dpi = 300)
+
+
+# # Top thaw decliners (negative response)
+# tax_sig_down_fl <- tax_response_fl %>%
+#   filter(Significance == "Down")
+# 
+# down_up_fl <- tax_sig_down_fl %>%
+#   arrange(desc(RR_fl)) %>%
+#   slice(1:100)  # change 100 to however many you want
+# 
+# ggplot(down_up_fl, aes(x = reorder(ID, RR_fl), y = RR_fl, color = Phylum)) + 
+#   geom_pointrange(aes(ymin = ICl_R_fl, ymax = ICu_R_fl)) +
+#   geom_hline(yintercept = 0, linetype = 2) +
+#   facet_wrap(~Phylum, scales = "free_x") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+```
+7. Assessing thaw responders by site (Utqiagvik, UT)
+```{r}
+# Subset the data out for CRREL sites
+t.r.ut <- as.data.frame(thaw_response %>% select(matches("BEO1|BEO2")))
+ToF_ut <- t.r.ut;
+ToF_ut[ToF_ut > 0] <- 1 #anything above 0 is 1 (Presence absence table)
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices_ut <- grep("PRE", names(t.r.ut))
+post_col_indices_ut <- grep("POST", names(t.r.ut))
+
+pre_col_indices_ut
+post_col_indices_ut
+```
+
+7A. UT Thaw response (positive and negative)
+```{r}
+# Using relative abundance table, creates average
+ave1_ut = apply(t.r.ut[,c(2,4,6,8,10,12,14,16)],1,mean,na.rm = TRUE); # Control
+ave2_ut = apply(t.r.ut[,c(1,3,5,7,9,11,13,15)],1,mean,na.rm = TRUE); # Treatment
+
+# Standard Deviation of ALL samples
+sd1_ut = apply(t.r.ut[,c(2,4,6,8,10,12,14,16)],1,sd,na.rm = TRUE); # Control
+sd2_ut = apply(t.r.ut[,c(1,3,5,7,9,11,13,15)],1,sd,na.rm = TRUE); # Treatment
+
+# How many encounters for ASV number of observations
+num1_ut = apply(ToF_ut[,c(2,4,6,8,10,12,14,16)],1,sum,na.rm = TRUE); # Control
+num2_ut = apply(ToF_ut[,c(1,3,5,7,9,11,13,15)],1,sum,na.rm = TRUE); # Treatment
+
+# Response ratio calculations
+v1_ut = sd1_ut^2 / (ave1_ut^2 * num1_ut); # Control
+v2_ut = sd2_ut^2 / (ave2_ut^2 * num2_ut); # Treatment
+
+# Square root of variance
+sqv_ut = sqrt(v1_ut + v2_ut)
+
+# RR = Response ratio
+RR_ut = log(ave2_ut / ave1_ut)
+
+# Confidence interval
+ICl_R_ut = RR_ut - 1.96 * sqv_ut
+ICu_R_ut = RR_ut + 1.96 * sqv_ut
+
+# Error
+err_R_ut = ICu_R_ut - RR_ut
+
+# Significance
+Sig_R_ut = ICl_R_ut * ICu_R_ut
+Sig_adjust_R_ut <- p.adjust(Sig_R_ut, method = "fdr")
+
+# Creating data frame
+R_ut = as.data.frame(cbind(RR_ut, err_R_ut, Sig_R_ut, ICl_R_ut, ICu_R_ut))
+R_adjust_ut <- as.data.frame(cbind(RR_ut, err_R_ut, Sig_adjust_R_ut, ICl_R_ut, ICu_R_ut))
+
+# Add ID column
+R_ut$ID <- rownames(R_ut)
+
+# Determine direction of significance
+R_ut$Significance <- ifelse(ICl_R_ut > 0 & ICu_R_ut > 0, "Up",
+                     ifelse(ICl_R_ut < 0 & ICu_R_ut < 0, "Down", "Not Significant"))
+
+# Select significant ASVs
+sig_ASVs_ut <- R_ut[R_ut$Significance != "Not Significant", ]
+
+# Adjust for multiple comparisons
+z_scores_ut <- RR_ut / sqv_ut
+p_vals_ut <- 2 * pnorm(-abs(z_scores_ut))  # two-tailed test
+p_adj_ut <- p.adjust(p_vals_ut, method = "fdr")
+
+R_ut$p_value <- p_vals_ut
+R_ut$p_adj <- p_adj_ut
+R_ut$Significant_FDR <- p_adj_ut < 0.05
+
+# Merge with taxonomy table
+tax_response_ut <- left_join(R_ut, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+# Filter significant responses
+tax_sig_ut <- tax_response_ut %>% filter(Significance != "Not Significant")
+
+# Top responders
+tax_sig_top_ut <- tax_sig_ut %>%
+  arrange(desc(abs(RR_ut))) %>%
+  slice(1:100)
+
+# Plot
+ggplot(tax_sig_top_ut, aes(x = reorder(ID, RR_ut), y = RR_ut, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_ut, ymax = ICu_R_ut)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+```
+7B. Top thaw responders (Utqiagvik, UT)
+```{r}
+# Top thaw responders (positive response)
+tax_sig_up_ut <- tax_response_ut %>%
+  filter(Significance == "Up")
+
+top_up_ut <- tax_sig_up_ut %>%
+  filter(!is.na(Genus)) %>% 
+  arrange(desc(RR_ut)) %>%
+  slice(1:100)  # change 100 to however many you want
+
+
+ut_plot <- ggplot(top_up_ut, aes(x = reorder(Genus, RR_ut), y = RR_ut, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_ut, ymax = ICu_R_ut), color = "#7570b3") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, ncol = 3, scales = "free_x") +
+  theme_classic() +
+  theme(
+    strip.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 70, hjust = 1, size = 12),
+    axis.text.y = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    legend.position = "none"
+  ) +
+  labs(x = "Genus", y = "Log Response Ratio")
+  
+
+
+ggsave("~/GitHub/thaw.response/Figures/ut_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
+
+```
+
+
+```{r}
+# # Top thaw decliners (negative response)
+# tax_sig_down_ut <- tax_response_ut %>%
+#   filter(Significance == "Down")
+# 
+# down_up_ut <- tax_sig_down_ut %>%
+#   arrange(desc(RR_ut)) %>%
+#   slice(1:100)  # change 100 to however many you want
+# 
+# ggplot(down_up_ut, aes(x = reorder(ID, RR_ut), y = RR_ut, color = Phylum)) + 
+#   geom_pointrange(aes(ymin = ICl_R_ut, ymax = ICu_R_ut)) +
+#   geom_hline(yintercept = 0, linetype = 2) +
+#   facet_wrap(~Phylum, scales = "free_x") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+#   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+```
+8. Common positive thaw responders found in all 3 sites
+```{r}
+# Really we only care about the positive thaw responders 
+# Rename columns in each dataframe
+R_fl_renamed <- R_fl %>%
+  rename(RR = RR_fl,
+         err = err_R_fl,
+         Sig = Sig_R_fl,
+         ICl_R = ICl_R_fl,
+         ICu_R = ICu_R_fl) %>%
+  mutate(Site = "FL")
+
+R_crrel_renamed <- R_crrel %>%
+  rename(RR = RR_crrel,
+         err = err_R_crrel,
+         Sig = Sig_R_crrel,
+         ICl_R = ICl_R_crrel,
+         ICu_R = ICu_R_crrel) %>%
+  mutate(Site = "CRREL")
+
+R_ut_renamed <- R_ut %>%
+  rename(RR = RR_ut,
+         err = err_R_ut,
+         Sig = Sig_R_ut,
+         ICl_R = ICl_R_ut,
+         ICu_R = ICu_R_ut) %>%
+  mutate(Site = "UT")
+
+# Get IDs that are significant "Up" responders at all sites
+common_up_ASVs <- Reduce(intersect, list(
+  tax_sig_up_fl$ID,
+  tax_sig_up_crrel$ID,
+  tax_sig_up_ut$ID
+))
+
+# Bind rows from all sites for only the common "Up" responders
+combined_common_up <- bind_rows(
+  R_fl_renamed,
+  R_crrel_renamed,
+  R_ut_renamed
+) %>%
+  filter(ID %in% common_up_ASVs)
+
+# Add taxonomy
+combined_common_up <- left_join(
+  combined_common_up,
+  thaw.tax %>% mutate(ID = rownames(thaw.tax)),
+  by = "ID"
+)
+
+ggplot(combined_common_up, aes(x = reorder(ID, RR), y = RR, color = Phylum)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Site, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)",
+       title = "Common Positive Thaw Responders Across Sites")
+
+ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Phylum)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Site, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)",
+       title = "Common Positive Thaw Responders Across Sites")
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+
+
+ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Family)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Site, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)",
+       title = "Common Positive Thaw Responders Across Sites")
+```
+
+
+```{r}
+library(stringr)
+# Recode site before plotting so site shows up correctly
+combined_common_up <- combined_common_up %>%
+  mutate(
+    Site = recode(Site,
+                  "CRREL" = "CRREL",
+                  "FL" = "Farmers Loop",
+                  "UT" = "Utqiagvik")
+  )
+
+# Remove genus = NA 
+combined_common_up <- combined_common_up %>%
+  filter(!is.na(Genus))
+
+
+combined_common_up <- combined_common_up %>%
+mutate(Genus_wrapped = case_when(
+Genus == "Candidatus Planktophila" ~ "Candidatus\nPlanktophila",
+Genus == "Burkholderia-Caballeronia-Paraburkholderia" ~ "Burkholderia-Caballeronia-\nParaburkholderia",
+TRUE ~ Genus
+))
+response.family <- ggplot(combined_common_up, aes(x = reorder(Genus_wrapped, RR), y = RR, color = Site)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R), position = position_dodge(width = 0.6)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Family, scales = "free_x", ncol = 3) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 10), # add angle = 70
+        strip.text = element_text(face = "bold")) +
+  labs(x = "Genus", y = "Log Response Ratio",
+       title = "") +
+  scale_color_manual(
+    values = c("#1b9e77", "#d95f02", "#7570b3"),
+    name = "Site")
+
+ggsave("~/GitHub/thaw.response/Figures/response.family.png", response.family, width = 10, height = 4, dpi = 300)
+
+```
+
+
+```{r}
+# Determining fold change
+combined_common_up$fold_change <- exp(combined_common_up$RR)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+Editing:
+Okay right away this is wrong because it needs to come from the top up datasets 
+```{r}
+# Bringing all the top 100 positive thaw responders together to one dataset
+# First, add a column to each dataset identifying the site
+tax_sig_top_fl <- top_up_fl %>% mutate(Site = "FL")
+tax_sig_top_crrel <- top_up_crrel %>% mutate(Site = "CRREL")
+tax_sig_top_ut <- top_up_ut %>% mutate(Site = "Utqiagvik")
+
+# Then bind them together
+metaRR <- bind_rows(tax_sig_top_crrel, tax_sig_top_fl, tax_sig_top_ut)
+library(dplyr)
+library(tidyr)
+
+# Rename existing Site column to avoid conflict
+metaRR2 <- metaRR %>%
+  rename(original_Site = Site)
+
+metaRR_long <- metaRR2 %>%
+  pivot_longer(
+    cols = matches("RR_|ICl_|ICu_"),
+    names_to = c(".value", "Site"),
+    names_pattern = "(RR|ICl|ICu)_(.*)",
+    names_repair = "unique"  # just in case
+  ) %>%
+  filter(!is.na(RR))
+
+
+
+ggplot(metaRR_long, aes(x = Genus, y = RR, color = Site)) +
+  geom_pointrange(aes(ymin = ICl, ymax = ICu), position = position_dodge(width = 0.6)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_classic() +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "Genus", y = "Log Response Ratio",
+       title = "") +
+  scale_color_manual(
+    values = c("#1b9e77", "#d95f02", "#7570b3"),
+    name = "Site")
+
+ggsave("~/GitHub/thaw.response/Figures/all_top100plot.png", width = 12, height = 10)
+#theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  #labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+```
+
+
+# Come back and do the following:
+- Check and vet all parts of this script (done
+- Get significance values to report 
+- Thaw responders for all sites --> positive --> common positive thaw responders across sites --> (top 100 from each site) --> plot the common thaw responders with the multi-point phylum plot 
+- 
+Redo: Okay bringing together the positive only datasets (not the top 100 of the positive)
+```{r}
+library(dplyr)
+tax_sig_up_fl <- top_sig_up_fl %>% mutate(Site = "FL")
+tax_sig_up_crrel <- top_sig_up_crrel %>% mutate(Site = "CRREL")
+tax_sig_up_ut <- top_sig_up_ut %>% mutate(Site = "Utqiagvik")
+
+```
+
+
+```{r}
+# Really we only care about the positive thaw responders 
+# Rename columns in each dataframe
+R_fl_renamed <- R_fl %>%
+  rename(RR = RR_fl,
+         err = err_R_fl,
+         Sig = Sig_R_fl,
+         ICl_R = ICl_R_fl,
+         ICu_R = ICu_R_fl) %>%
+  mutate(Site = "FL")
+
+R_crrel_renamed <- R_crrel %>%
+  rename(RR = RR_crrel,
+         err = err_R_crrel,
+         Sig = Sig_R_crrel,
+         ICl_R = ICl_R_crrel,
+         ICu_R = ICu_R_crrel) %>%
+  mutate(Site = "CRREL")
+
+R_ut_renamed <- R_ut %>%
+  rename(RR = RR_ut,
+         err = err_R_ut,
+         Sig = Sig_R_ut,
+         ICl_R = ICl_R_ut,
+         ICu_R = ICu_R_ut) %>%
+  mutate(Site = "UT")
+
+# Get IDs that are significant "Up" responders at all sites
+common_up_ASVs <- Reduce(intersect, list(
+  tax_sig_up_fl$ID,
+  tax_sig_up_crrel$ID,
+  tax_sig_up_ut$ID
+))
+
+# Bind rows from all sites for only the common "Up" responders
+combined_common_up <- bind_rows(
+  R_fl_renamed,
+  R_crrel_renamed,
+  R_ut_renamed
+) %>%
+  filter(ID %in% common_up_ASVs)
+
+# Add taxonomy
+combined_common_up <- left_join(
+  combined_common_up,
+  thaw.tax %>% mutate(ID = rownames(thaw.tax)),
+  by = "ID"
+)
+
+ggplot(combined_common_up, aes(x = reorder(ID, RR), y = RR, color = Phylum)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Site, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)",
+       title = "Common Positive Thaw Responders Across Sites")
+
+ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Phylum)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~Site, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1),
+        strip.text = element_text(face = "bold")) +
+  labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)",
+       title = "Common Positive Thaw Responders Across Sites")
+```
+
+

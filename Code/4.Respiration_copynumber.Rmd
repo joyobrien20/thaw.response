@@ -1,0 +1,838 @@
+---
+title: "Respiration and copy number analysis"
+author: "Joy O'Brien"
+date: "2025-03-24"
+output: html_document
+---
+Note: Deleted Fl1C4 R8 from the respiration data because we do not have the copy number counterpart 
+
+1. Set working directory and load libraries
+```{r setup, include=FALSE}
+setwd("~/GitHub/thaw.response")
+
+# Load the necessary libraries
+library(vegan)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(e1071) #for skewness function
+library(FSA)
+
+```
+
+2. Load data
+```{r}
+# Read in the data from excel 
+cpnumb <- read_excel("~/GitHub/thaw.response/Data/16Scopy_number.xlsx", sheet = "16S_copy")
+resp4copy <- read_excel("~/GitHub/thaw.response/Data/cumulative_resp.xlsx", sheet = "resp")
+thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
+```
+
+3. Calculate absolute abundance using OTU table and 16S copy numbers
+```{r}
+# Extract raw OTU count table and make a matrix
+otu_table <- as.data.frame(thaw@otu_table)
+otu_mat <- as.matrix(otu_table)
+
+# 2. Extract qPCR copy numbers into a named vector
+qPCR_vec <- setNames(cpnumb$copy_numb_gsoil, cpnumb$Sample_ID)
+
+# 3. Match the sample order to OTU matrix columns
+qPCR_vec <- qPCR_vec[colnames(otu_mat)]
+
+# 4. Calculate total sequencing reads per sample
+total_reads <- colSums(otu_mat)
+
+# 5. Calculate scaling factors
+scaling_factors <- qPCR_vec / total_reads
+
+# 6. Multiply each column (sample) in the OTU matrix by its scaling factor
+otu_abs_abund <- sweep(otu_mat, 2, scaling_factors, FUN = "*")
+
+
+# Checking the potential error / mismatch 
+# Sample names in OTU table
+otu_samples <- colnames(otu_mat)
+
+# Sample names in qPCR data
+qpcr_samples <- cpnumb$Sample_ID
+
+# Find which OTU samples are missing in qPCR
+missing_in_qpcr <- otu_samples[!otu_samples %in% qpcr_samples]
+
+# Also check the reverse: which qPCR samples aren't in OTU table
+missing_in_otu <- qpcr_samples[!qpcr_samples %in% otu_samples]
+
+# Print to investigate
+missing_in_qpcr
+missing_in_otu
+
+```
+
+3A. Identifying and Removing samples that don't align in the two datasets
+```{r}
+# scaling_factors came from: qPCR_vec / total_reads
+na_samples <- names(scaling_factors)[is.na(scaling_factors)]
+na_samples
+
+#–– If you’re working with plain matrices / data frames ––
+otu_mat      <- otu_mat[ , !colnames(otu_mat)      %in% na_samples]
+total_reads  <- total_reads[ !names(total_reads)   %in% na_samples]
+qPCR_vec     <- qPCR_vec[  !names(qPCR_vec)        %in% na_samples]
+
+scaling_factors <- qPCR_vec / total_reads          # now no NAs
+otu_abs_abund   <- sweep(otu_mat, 2, scaling_factors, FUN = "*")
+
+
+
+```
+3B. Reset and filter
+```{r}
+# First, ensure both are named vectors
+names(qPCR_vec)     # should return sample names
+names(total_reads)  # should return sample names
+
+# Align by intersecting names
+shared_samples <- intersect(names(qPCR_vec), names(total_reads))
+
+# Subset both to shared samples
+qPCR_vec      <- qPCR_vec[shared_samples]
+total_reads   <- total_reads[shared_samples]
+
+# Now calculate scaling factors
+scaling_factors <- qPCR_vec / total_reads
+
+```
+
+3C. Confirming that they align
+```{r}
+length(scaling_factors)
+any(is.na(scaling_factors))  # should be FALSE
+
+```
+3D. Calculating for absolute_otu
+```{r}
+# Make sure samples in scaling_factors match the columns in otu_mat
+otu_mat_subset <- otu_mat[, names(scaling_factors)]
+
+# Multiply each sample column by its corresponding scaling factor
+absolute_otu <- sweep(otu_mat_subset, 2, scaling_factors, `*`)
+```
+
+4. Subsetting copynumber data to analyze
+```{r}
+# Subsetting the data so that we can analyze 
+library(dplyr)
+
+# Subset data for 'pre' thaw samples
+pre_thaw_copy <- cpnumb %>%
+  filter(pre_post_thaw == "pre")
+
+# Subset data for 'post' thaw samples
+post_thaw_copy <- cpnumb %>%
+  filter(pre_post_thaw == "post")
+
+# Make sure that we have the right number of observations
+unique <- setdiff(pre_thaw_copy$sample_ID, resp4copy$Sample_ID)
+print(unique)
+# Visualizing to start off
+scatter.smooth(pre_thaw_copy$copy_numb_gsoil, y = resp4copy$Cumulative_Respiration)
+
+# Checking for normality
+shapiro.test(pre_thaw_copy$copy_numb_gsoil) #p-value = 0.007103 Data is not normal
+shapiro.test(resp4copy$Cumulative_Respiration) #p-value = 0.02446 data is not normal 
+
+```
+
+1. Looking at pre-thaw copy number and cumulative respiration
+```{r}
+# Before merging the datasets, we want to drop the PRE_SOIL from the sample ID name in pre_thaw_copy so we can smoothly merge with the resp data
+
+pre_thaw_copy$Sample_ID <- sub("_PRE_SOIL", "", pre_thaw_copy$Sample_ID)
+
+
+# Merge datasets 
+# Merge the data frames (pre-thaw copy number and resp)
+
+pre_respcpnumb <- merge(pre_thaw_copy, resp4copy, by = "Sample_ID")
+
+# Remove extra columns 
+pre_respcpnumb<- pre_respcpnumb[ , !(names(pre_respcpnumb) %in% c("site.y", "core.y")) ]
+# Remove the .x from site and core 
+names(pre_respcpnumb) <- sub("\\.x$", "", names(pre_respcpnumb))
+```
+
+
+1A. Spearman Correlation for cumulative respiration and pre-thaw copy number
+```{r}
+# FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ PRE THAW COPY NUMBER 
+resp_pre_corr <- cor.test(x =pre_respcpnumb$copy_numb_gsoil, y = pre_respcpnumb$Cumulative_Respiration, method = "spearman")
+print(resp_pre_corr)
+```
+1B. Visualize the relationship here
+```{r}
+# Visualize here 
+# ggplot(pre_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
+#   geom_point(aes(color = site)) +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   geom_smooth(method = "lm", color = "black", linetype = "dashed", fill = "gray", alpha = 0.2, se = TRUE) +
+#   xlab("log10 Pre-thaw copy number g⁻¹ soil") +
+#   ylab("log10 Cumulative Respiration (µg C-CO₂ g⁻¹ dry soil)") +
+#   theme(text = element_text(size = 12)) +
+#   scale_color_discrete("Site") +
+#   theme_classic()
+
+pre.plot <- ggplot(pre_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm", color = "black", linetype = "dashed", fill = "gray", alpha = 0.2, se = TRUE) +
+  labs(
+    x = expression("log"[10] * " Pre-thaw copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)")
+  ) +
+  scale_color_manual(
+    values = c("#1b9e77", "#d95f02", "#7570b3"),
+    name = "Site"
+  ) +
+  theme(text = element_text(size = 12)) +
+  theme_classic()
+
+```
+
+2. Looking at post-thaw copy number and cumulative respiration
+
+```{r}
+# Before merging the datasets, we want to drop the POST_SOIL from the sample ID name in pre_thaw_copy so we can smoothly merge with the resp data
+
+post_thaw_copy$Sample_ID <- sub("_POST_SOIL", "", post_thaw_copy$Sample_ID)
+
+
+# Merge datasets 
+# Merge the data frames (pre-thaw copy number and resp)
+
+post_respcpnumb <- merge(post_thaw_copy, resp4copy, by = "Sample_ID")
+
+# Remove extra columns 
+post_respcpnumb<- post_respcpnumb[ , !(names(post_respcpnumb) %in% c("site.y", "core.y")) ]
+# Remove the .x from site and core 
+names(post_respcpnumb) <- sub("\\.x$", "", names(post_respcpnumb))
+```
+
+2A. Spearman Correlation for cumulative respiration and post-thaw copy number
+```{r}
+# FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
+resp_post_corr <- cor.test(x =post_respcpnumb$copy_numb_gsoil, y = post_respcpnumb$Cumulative_Respiration, method = "spearman")
+print(resp_post_corr)
+```
+2B. Visualizing 
+
+```{r}
+ggplot(post_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm", color = "black", fill = "gray", alpha = 0.2, se = TRUE) +
+  xlab("log10 Post-thaw copy number g⁻¹ soil") +
+  ylab("log10 Cumulative Respiration (µg C-CO₂ g⁻¹ dry soil)") +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site") +
+  theme_classic()
+
+post.plot <- ggplot(post_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm", color = "black", fill = "gray", alpha = 0.2, se = TRUE) +
+  labs(
+    x = expression("log"[10] * " Post-thaw copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)")
+  ) +
+  scale_color_manual(
+    values = c("#1b9e77", "#d95f02", "#7570b3"),
+    name = "Site"
+  ) +
+  theme(text = element_text(size = 12)) +
+  theme_classic()
+
+```
+3. Bringing the two plots together
+```{r}
+# Facet 
+library(patchwork)
+# Combine plots
+combined <- pre.plot + post.plot
+
+# Display combined
+combined
+
+# Trying another way 
+install.packages("gridextra")
+library(gridExtra)
+
+
+```
+
+
+
+
+```{r}
+respcpnumb <- factor(respcpnumb, levels = rev(levels(respcpnumb)))
+# Hannah's code to visualize both pre and post as a response to respiration: 
+pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
+  ggplot(aes(respcpnumb, x = copy_number, y = Cumulative_Respiration, shape = Pre_post_copynumber, group = Pre_post_copynumber, color = site)) + 
+           geom_point(size = 2.5) + 
+  geom_smooth(method = "lm", se = TRUE, aes(color = Pre_post_copynumber)) + # okay this works but its coming out weird in the legend 
+            scale_x_log10() +
+            #scale_y_log10() +
+            theme_classic() +
+            xlab("log10 Copy number g-1 soil") +
+            ylab("Cumulative respiration (µg C-CO2 g-1 dry soil)") +
+            theme(text = element_text(size = 12)) +
+            scale_shape_discrete("Copy number type", labels = c("Post-thaw", "Pre-thaw")) + #this line changes the name of the shape but doesnt take the data with it 
+            scale_color_discrete("Site")
+            # geom_smooth(aes(color = "pre_post_thaw")) trying to change the color of the regression lines
+            # guide = guide_legend(reverse = TRUE)
+
+```
+
+```{r}
+respcpnumb <- merge(pre_respcpnumb, post_respcpnumb, by = "Sample_ID")
+
+library(dplyr)
+
+# Suppose pre_respcpnumb and post_respcpnumb have these columns:
+# Sample_ID, site, core, pre_post_thaw, copy_numb_gsoil, Cumulative_Respiration
+
+# First join by Sample_ID, but exclude the columns you don't want duplicated
+
+respcnumb_delta <- full_join(
+  pre_respcpnumb %>% select(-pre_post_thaw),  # remove pre_post_thaw from pre dataset
+  post_respcpnumb %>% select(-pre_post_thaw), # remove pre_post_thaw from post dataset
+  by = c("Sample_ID", "site", "core", "Cumulative_Respiration"),
+  suffix = c("_pre", "_post")  # keep suffixes only for differing columns
+)
+
+
+library(dplyr)
+
+respcpnumb_change <- respcnumb_delta %>%
+  mutate(
+    # Calculate fold change (post / pre), avoid divide-by-zero issues with a small pseudocount
+    fold_change = (copy_numb_gsoil_post + 1) / (copy_numb_gsoil_pre + 1),
+    log2_fold_change = log2(fold_change),
+    
+    # Optional: difference in copy number
+    diff_copy_number = copy_numb_gsoil_post - copy_numb_gsoil_pre
+  )
+
+# For not log2
+library(dplyr)
+
+respcpnumb_change_sub <- respcnumb_delta %>%
+  mutate(
+    # Difference in copy number (post - pre)
+    diff_copy_number = copy_numb_gsoil_post - copy_numb_gsoil_pre
+  )
+
+
+library(ggplot2)
+
+ggplot(respcpnumb_change_sub, aes(x = log2_fold_change, y = Cumulative_Respiration, color = site)) +
+  #geom_point(size = 3, alpha = 0.9) +
+  geom_smooth(method = "lm", se = TRUE, aes(color = site)) +
+   geom_point(size = 3, alpha = 0.9) +
+  scale_y_log10() +  # log scale respiration
+  labs(
+    x = "Log2 Fold Change in 16S Copy Number (" g"^{-1} * " dry soil)",
+    y = expression("Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)",
+    color = "Site") +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +  # FIXED: added missing parenthesis
+  theme_classic() +
+  theme(text = element_text(size = 12))
+```
+
+```{r}
+ggplot(respcpnumb_change_sub, aes(x = diff_copy_number, y = Cumulative_Respiration, color = site)) +
+  geom_smooth(method = "lm", se = TRUE, aes(color = site)) +
+  geom_point(size = 3, alpha = 0.9) +
+  scale_y_log10() +# log scale respiration
+  scale_x_log10() +
+  labs(
+    x = expression("Log2 Fold Change in 16S Copy Number (g"^{-1}~"dry soil)"),
+    y = expression("Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+```
+
+
+Stats
+```{r}
+# Is the relationship between the change in biomass and cumulative respiration significant? 
+
+# For each site separately 
+library(dplyr)
+library(dplyr)
+
+# Separate linear models per site
+respcpnumb_change_sub %>%
+  group_by(site) %>%
+  do(model = summary(lm(log10(Cumulative_Respiration) ~ diff_copy_number, data = .)))
+
+model_full <- lm(log10(Cumulative_Respiration) ~ diff_copy_number + site, data = respcpnumb_change)
+summary(model_full)
+anova(model_full)
+
+
+```
+```{r}
+lm(log10(Cumulative_Respiration) ~ log2_fold_change + site)
+
+```
+
+
+```{r}
+ancova_model <- aov(log10(Cumulative_Respiration) ~ log2_fold_change * site, data = respcpnumb_change)
+summary(ancova_model)
+
+respcpnumb_change %>%
+  group_by(site) %>%
+  summarize(r_squared = summary(lm(log10(Cumulative_Respiration) ~ log2_fold_change))$r.squared)
+
+plot(model_full)
+```
+
+
+Now for stats on this 
+```{r}
+#linearmodel_respcopypost <- glm(copy_number_per_gsoil_POST ~ Cumulative_Respiration, family=gaussian, data = respcpnumb)
+lm_change <- lm(Cumulative_Respiration ~ log2_fold_change + site + diff_copy_number:site, data = respcpnumb_change)
+summary(lm_change)
+AIC(lm_change)
+# What is the r2 and p-value for the whole model, not split by site
+lm_whole <- lm(Cumulative_Respiration ~ log2_fold_change, data = respcpnumb_change)
+summary(lm_whole)
+AIC(lm_whole)
+
+library(rsq)
+rsq.partial(lm_change)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Combine the two datasets by row (assuming both have the same columns)
+combined_respcpnumb <- bind_rows(pre_respcpnumb, post_respcpnumb)
+
+# Check combined data
+head(combined_respcpnumb)
+
+# Plot with pre_post_thaw as a shape/color grouping factor
+ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site, shape = pre_post_thaw)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, aes(linetype = pre_post_thaw, color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site",
+    shape = "Pre/Post Thaw",
+    linetype = "Pre/Post Thaw"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+```
+# Plotting for publication
+```{r}
+
+combined_respcpnumb$pre_post_thaw <- factor(combined_respcpnumb$pre_post_thaw, levels = c("pre", "post"))
+
+ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site, shape = pre_post_thaw)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(
+    method = "lm", 
+    se = TRUE, 
+    aes(group = pre_post_thaw, linetype = pre_post_thaw),  # map linetype properly
+    color = "black"  # this will be overridden by linetype, so you can remove this or keep it for black lines
+  ) +
+  scale_linetype_manual(values = c("dashed", "solid")) +  # assign dashed for pre, solid for post
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site",
+    shape = "Copy number type",
+    linetype = "Copy number type"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+
+```
+```{r}
+ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site, shape = pre_post_thaw)) +
+  geom_smooth(
+    method = "lm", 
+    se = TRUE, 
+    aes(group = pre_post_thaw, linetype = pre_post_thaw),
+    color = "black"
+  ) +
+  geom_point(size = 3, alpha = 0.8, stroke = 1) +
+  scale_shape_manual(
+    values = c("pre" = 1, "post" = 16)  # hollow circle for pre, filled for post
+  ) +
+  scale_linetype_manual(
+    values = c("pre" = "dotted", "post" = "solid")
+  ) +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site",
+    shape = "Copy number type",
+    linetype = "Copy number type"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+```
+
+Now adding inset -- this is not the vibe
+```{r}
+library(ggplot2)
+library(patchwork)
+
+# 1. Main plot (you already have this)
+main_plot <- ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site, shape = pre_post_thaw)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(
+    method = "lm", 
+    se = TRUE, 
+    aes(group = pre_post_thaw, linetype = pre_post_thaw),
+    color = "black"
+  ) +
+  scale_linetype_manual(values = c("dashed", "solid")) +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site",
+    shape = "Copy number type",
+    linetype = "Copy number type"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+# 2. Pre-thaw-only plot
+pre_plot <- combined_respcpnumb |>
+  dplyr::filter(pre_post_thaw == "pre") |>
+  ggplot(aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site)) +
+  geom_point(size = 1.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed") +
+  scale_x_log10() +
+  scale_y_log10() +
+  #theme_void() + 
+  theme(legend.position = "none")
+
+# 3. Post-thaw-only plot
+post_plot <- combined_respcpnumb |>
+  dplyr::filter(pre_post_thaw == "post") |>
+  ggplot(aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site)) +
+  geom_point(size = 1.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "solid") +
+  scale_x_log10() +
+  scale_y_log10() +
+  #theme_void() +
+  theme(legend.position = "none")
+
+# 4. Add insets
+final_plot <- main_plot +
+  inset_element(pre_plot, left = 0.05, bottom = 0.6, right = 0.4, top = 0.95) +
+  inset_element(post_plot, left = 0.6, bottom = 0.05, right = 0.95, top = 0.4)
+
+# 5. Print
+final_plot
+
+```
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+# Assuming your data frame is called 'respcpnumb' and has columns like:
+# - Cumulative_Respiration
+# - site
+# - copy_number_pre_thaw
+# - copy_number_post_thaw
+
+# First pivot longer the pre/post copy number columns to one column, with type info
+respcpnumb_long <- respcpnumb %>%
+  pivot_longer(
+    cols = c(copy_number_pre_thaw, copy_number_post_thaw),
+    names_to = "Pre_post_copynumber",
+    values_to = "copy_number"
+  ) %>%
+  # Optional: clean up the Pre_post_copynumber labels for nicer legend
+  mutate(Pre_post_copynumber = recode(Pre_post_copynumber,
+                                     copy_number_pre_thaw = "Pre-thaw",
+                                     copy_number_post_thaw = "Post-thaw"))
+
+# Plot
+ggplot(respcpnumb_long, aes(x = copy_number, y = Cumulative_Respiration, 
+                           color = site, shape = Pre_post_copynumber)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, aes(linetype = Pre_post_copynumber, color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +  # optional, comment out if you don't want log y-axis
+  labs(
+    x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    color = "Site",
+    shape = "Copy Number Type",
+    linetype = "Copy Number Type"
+  ) +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  theme_classic() +
+  theme(text = element_text(size = 12))
+
+```
+
+
+Okay now we will look to see if change in copy number has any correlation with cumulative respiration
+```{r}
+library(dplyr)
+
+respcpnumb_change <- respcpnumb %>%
+  mutate(
+    # Calculate fold change (post / pre), avoid divide-by-zero issues with a small pseudocount
+    fold_change = (copy_number_post_thaw + 1) / (copy_number_pre_thaw + 1),
+    log2_fold_change = log2(fold_change),
+    
+    # Optional: difference in copy number
+    diff_copy_number = copy_number_post_thaw - copy_number_pre_thaw
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+# ANALYZING RESPIRATION AND PRE THAW COPY NUMBERS HERE 
+
+
+# Look at the density of cumulative respiration
+# plot(density(resp$Cumulative_Respiration), main="Cumulative_Respiration", ylab="Frequency", 
+     # sub=paste("Skewness:", round(e1071::skewness(resp$Cumulative_Respiration), 3)))
+# polygon(density(resp$Cumulative_Respiration), col="darkorange")
+
+# Look at the density of copy numbers pre
+# plot(density(cpnumb$copy_number_per_gsoil_PRE), main="copy_number_per_gsoil_PRE", ylab="Frequency", 
+     # sub=paste("Skewness:", round(e1071::skewness(cpnumb$copy_number_per_gsoil_PRE), 3)))
+
+# polygon(density(cpnumb$copy_number_per_gsoil_PRE), col="darkorange")
+
+# Merge the data frames
+respcpnumb <- merge(resp4copy,cpnumb) 
+
+# Okay let's run a Kruskall Wallis and then a dunn test (maybe) for cum resp and pre-thaw copy numbers
+kruskal.test(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+kruskal.test(copy_number_per_gsoil_PRE ~ site, data = cpnumb) # not significant p = 0.2062
+
+kruskal.test(copy_number_per_gsoil_POST ~ site, data = cpnumb) #significant p-value = 0.03
+dunn_test(copy_number_per_gsoil_POST ~ site, data = cpnumb)
+kruskal.test(copy_number_per_gsoil_PRE ~ copy_number_per_gsoil_POST, data = cpnumb) # p-value = 0.4599
+```
+
+```{r}
+# Okay let's run a Kruskall Wallis for cum respiration and post thaw copy numbers
+kruskal.test(copy_number_per_gsoil_POST ~ Cumulative_Respiration, data = respcpnumb) # Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589 SAME P VALUE?
+
+# FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ PRE THAW COPY NUMBER 
+resp_pre_corr <- cor.test(x =respcpnumb$copy_number_per_gsoil_PRE, y = respcpnumb$Cumulative_Respiration, method = "spearman")
+print(resp_pre_corr)
+
+# Visualize here 
+ggplot(respcpnumb, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  #scale_x_log10() +
+  #scale_y_log10() +
+  geom_smooth(method = "lm")
+
+respcpnumb <- factor(respcpnumb, levels = rev(levels(respcpnumb)))
+# Hannah's code to visualize both pre and post as a response to respiration: 
+pivot_longer(respcpnumb, cols = contains("copy_number"), names_to = "Pre_post_copynumber", values_to = "copy_number") %>% 
+  ggplot(aes(respcpnumb, x = copy_number, y = Cumulative_Respiration, shape = Pre_post_copynumber, group = Pre_post_copynumber, color = site)) + 
+           geom_point(size = 2.5) + 
+  geom_smooth(method = "lm", se = TRUE, aes(color = Pre_post_copynumber)) + # okay this works but its coming out weird in the legend 
+            scale_x_log10() +
+            #scale_y_log10() +
+            theme_classic() +
+            xlab("log10 Copy number g-1 soil") +
+            ylab("Cumulative respiration (µg C-CO2 g-1 dry soil)") +
+            theme(text = element_text(size = 12)) +
+            scale_shape_discrete("Copy number type", labels = c("Post-thaw", "Pre-thaw")) + #this line changes the name of the shape but doesnt take the data with it 
+            scale_color_discrete("Site")
+            # geom_smooth(aes(color = "pre_post_thaw")) trying to change the color of the regression lines
+            # guide = guide_legend(reverse = TRUE)
+
+```
+
+```{r}
+# NEXT LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
+resp_post_corr <- cor.test(x = respcpnumb$copy_number_per_gsoil_POST, y = respcpnumb$Cumulative_Respiration, method = "spearman")
+print(resp_post_corr)
+
+# Visualize 
+ggplot(respcpnumb, aes(x =copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm")
+
+# Cleaning up the figure for publication 
+ggplot(respcpnumb, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site), size = 2.5) +
+  theme_classic() +
+  scale_x_log10() +
+  scale_y_log10() +
+  xlab("log10 Post-thaw copy number g-1 soil") +
+  ylab("log10 Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+  geom_smooth(method = "lm", color = "dark gray", se=TRUE) +
+  theme(text = element_text(size = 12)) +
+  scale_color_discrete("Site")
+```
+
+```{r}
+# NOW WE WILL RUN KRUSKALL WALLIS ON BACTERIAL ABUMDANCE PRE THAW BY SITE 
+kruskal.test(copy_number_per_gsoil_PRE ~ site, data = respcpnumb) # chi-squared = 3.1581, df = 2, p-value = 0.2062
+
+# AND WE WILL RUN KRUSKALL ON BACTERIAL ABUNDANCE POST THAW BY SITE
+kruskal.test(copy_number_per_gsoil_POST ~ site, data = respcpnumb) # significant: Kruskal-Wallis chi-squared = 6.7302, df = 2, p-value = 0.03456
+dunnTest(copy_number_per_gsoil_POST ~ site, data = respcpnumb, method = 'bh') # not sure if I should be using bh or holms? 
+
+# Now let's look to see if there is any significance pre and post thaw by site for copy numbers 
+kruskal.test(copy_number_per_gsoil_PRE ~ copy_number_per_gsoil_POST, data = respcpnumb) # NOT SIGNIF Kruskal-Wallis chi-squared = 21, df = 21, p-value = 0.4589
+
+```
+
+```{r}
+# *************************************************************************************************************************************************************
+# Creating the glm THIS NEEDS TO BE EDITED
+linearmodel_respcopypre <- glm(copy_number_per_gsoil_PRE ~ Cumulative_Respiration, family=gaussian, data = respcpnumb)
+
+# Look at the results of the glm
+print(linearmodel_respcopypre)
+summary(linearmodel_respcopypre)
+
+# Visualize with ggplot  ## Okay this is fine, BUT I want to show this by site so theoretically make 3 plots for pre and 3 for post 
+ggplot(linearmodel_respcopypre, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration)) +
+  geom_point (aes(color = linearmodel_respcopypre[["data"]][["site"]])) + 
+  #scale_x_log10() +
+  #scale_y_log10() +
+  geom_smooth(method = "lm")
+
+#**************************************************************************
+
+# ANALYZING POST-THAW COPY NUMBERS AND RESPIRATION
+
+# Visualizing the data to start off 
+scatter.smooth(x = cpnumb$copy_number_per_gsoil_POST, y = resp4copy$Cumulative_Respiration)
+
+# Checking for normality in the post thaw copy number values 
+shapiro.test(cpnumb$copy_number_per_gsoil_POST) #p-value = 5.065e-06, not normal
+
+# We need to check if the dependent variable is close to normal (?)
+par(mfrow=c(1, 2)) # divide graph area in 2 columns
+
+# Look at the density of cumulative respiration
+plot(density(resp$Cumulative_Respiration), main="Cumulative_Respiration", ylab="Frequency", 
+     sub=paste("Skewness:", round(e1071::skewness(resp$Cumulative_Respiration), 3)))
+polygon(density(resp$Cumulative_Respiration), col="darkorange")
+
+# Look at the density of copy numbers pre
+plot(density(cpnumb$copy_number_per_gsoil_POST), main="copy_number_per_gsoil_POST", ylab="Frequency", 
+     sub=paste("Skewness:", round(e1071::skewness(cpnumb$copy_number_per_gsoil_POST), 3)))
+
+polygon(density(cpnumb$copy_number_per_gsoil_PRE), col="darkorange")
+
+# Run the glm, this needs to be edited
+linearmodel_respcopypost <- glm(copy_number_per_gsoil_POST ~ Cumulative_Respiration, family=gaussian, data = respcpnumb)
+
+# Look at the results of the glm
+print(linearmodel_respcopypost)
+summary(linearmodel_respcopypost)
+
+# Visualize with ggplot # HAVE TO GET THIS BY SITE AGAIN, IT'S FREAKING OUT OTHERWISE 
+ggplot(linearmodel_respcopypost, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respiration)) +
+  geom_point(aes(color = linearmodel_respcopypost[["data"]][["site"]])) + 
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm")
+
+#*****************************************************************************
+
+# Spearman correlation for copy numbers post thaw and copy numbers pre thaw
+
+# First let's look at pre-thaw
+
+# Make a QQ plot
+qqnorm(x = copynumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration, main = "Q-Q Plot")
+
+# Run the corr test 
+copyprecorr <- cor.test(x = copynumb$copy_number_per_gsoil_PRE, y = resp4copy$Cumulative_Respiration, method = "spearman") #p value = 0.6012, rho = 0.1146245
+print(copyprecorr)
+
+precopyresp<- merge(copynumb, resp4copy)
+
+# Visualize
+ggplot(precopyresp, aes(x = copy_number_per_gsoil_PRE, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site, shape = core)) 
+scale_x_log10() +
+  scale_y_log10()
+
+# Now we will look at copy number post thaw 
+
+# Visualize a QQ plot first
+qqnorm(x = copynumb$copy_number_per_gsoil_POST, y = resp4copy$Cumulative_Respiration, main = "Q-Q Plot")
+
+copypostcorr <- cor.test(x = copynumb$copy_number_per_gsoil_POST, y = resp4copy$Cumulative_Respiration, method = "spearman") # p-value = 0.001604, rho = 0.6304348
+print(copypostcorr)
+
+# Visualize
+ggplot(precopyresp, aes(x = copy_number_per_gsoil_POST, y = Cumulative_Respiration)) + 
+  geom_point(aes(color = site, shape = core)) +
+  scale_x_log10() +
+  scale_y_log10()
+
+# END
+```
+

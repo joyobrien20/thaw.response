@@ -36,6 +36,7 @@ thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
 ```
 0. Looking at top phylum and classes for fun
 ```{r}
+
 # TOP 5 PHYLA
 # Load necessary libraries
 library(phyloseq)
@@ -105,6 +106,7 @@ ggplot(top_5_class, aes(x = reorder(Class, -Abundance), y = Abundance, fill = Cl
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
 ```{r}
 # TOP 10 MOST ABUNDANT CLASS
 top_10_class <- class_df[1:10, ]  # Select top 10 classes
@@ -118,6 +120,545 @@ ggplot(top_10_class, aes(x = reorder(Class, -Abundance), y = Abundance, fill = C
        y = "Abundance") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+
+1. Coming back to this after thaw response analysis--need to know if the common thaw responders make up a significant part of the pre thaw? 
+1A. Top 5 phyla pre-thaw 
+```{r}
+# Okay we made the thaw.abs phyloseq object in script 1, so that we can look at absolute abundance
+
+# TOP 5 PHYLA pre-thaw
+presamples <- subset_samples(thaw.abs, pre_post_thaw == "pre")
+# Summarize taxa at the Phylum level
+prephyla_abundance <- tax_glom(presamples, taxrank = "Phylum")
+
+# Convert phyloseq object to a dataframe
+prephyla_df <- as.data.frame(tax_table(prephyla_abundance))
+prephyla_df$Abundance <- taxa_sums(prephyla_abundance)
+
+# Summarize and sort by abundance
+prephyla_df <- prephyla_df[order(-prephyla_df$Abundance), ]  # Sort in descending order
+pretop_5_phyla <- prephyla_df[1:5, ]  # Select top 5 phyla
+
+# Plot using ggplot2
+ggplot(pretop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Phyla PRE-THAW",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+1B. Top 5 phyla post thaw 
+```{r}
+postsamples <- subset_samples(thaw.abs, pre_post_thaw == "post")
+# Summarize taxa at the Phylum level
+postphyla_abundance <- tax_glom(postsamples, taxrank = "Phylum")
+
+# Convert phyloseq object to a dataframe
+postphyla_df <- as.data.frame(tax_table(postphyla_abundance))
+postphyla_df$Abundance <- taxa_sums(postphyla_abundance)
+
+# Summarize and sort by abundance
+postphyla_df <- postphyla_df[order(-postphyla_df$Abundance), ]  # Sort in descending order
+posttop_5_phyla <- postphyla_df[1:5, ]  # Select top 5 phyla
+
+# Plot using ggplot2
+ggplot(posttop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Phyla POST-THAW",
+       x = "Phylum",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+1C. Top 5 genus pre-thaw 
+
+```{r}
+# TOP 5 PHYLA pre-thaw
+presamples <- subset_samples(thaw.abs, pre_post_thaw == "pre")
+# Summarize taxa at the Phylum level
+pregenus_abundance <- tax_glom(presamples, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+pregenus_df <- as.data.frame(tax_table(pregenus_abundance))
+pregenus_df$Abundance <- taxa_sums(pregenus_abundance)
+
+# Summarize and sort by abundance
+pregenus_df <- pregenus_df[order(-pregenus_df$Abundance), ]  # Sort in descending order
+pretop_5_genus <- pregenus_df[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(pretop_5_genus, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus PRE-THAW",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+1D. Top 5 genus post-thaw
+
+```{r}
+# TOP 5 PHYLA pre-thaw
+postamples <- subset_samples(thaw.abs, pre_post_thaw == "post")
+# Summarize taxa at the Phylum level
+postgenus_abundance <- tax_glom(postsamples, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+postgenus_df <- as.data.frame(tax_table(postgenus_abundance))
+postgenus_df$Abundance <- taxa_sums(postgenus_abundance)
+
+# Summarize and sort by abundance
+postgenus_df <- postgenus_df[order(-postgenus_df$Abundance), ]  # Sort in descending order
+posttop_5_genus <- postgenus_df[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(posttop_5_genus, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus POST-THAW",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Should this be assessbed by site now?
+CRREL
+```{r}
+# TOP 5 Genus pre-thaw -- CRREL
+presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
+# Summarize taxa at the Phylum level
+pregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(pregenus_abundance_crrel)
+
+# Summarize and sort by abundance
+pregenus_df_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ]  # Sort in descending order
+pretop_5_genus_crrel <- pregenus_df_crrel[1:10, ]  # Select top 5 genus/top 10
+
+# Plot using ggplot2
+ggplot(pretop_5_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus PRE-THAW CRREL",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# TOP 5 Genus post-thaw -- CRREL
+postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
+# Summarize taxa at the Phylum level
+postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
+postgenus_df_crrel$Abundance <- taxa_sums(postgenus_abundance_crrel)
+
+# Summarize and sort by abundance
+postgenus_df_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ]  # Sort in descending order
+posttop_5_genus_crrel <- postgenus_df_crrel[1:10, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(posttop_5_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus POST-THAW",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+CRREL top 10, phylum legend
+
+```{r}
+# Subset and summarize
+#presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")#Epregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+
+# Convert phyloseq object to dataframe
+pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(pregenus_abundance_crrel)
+#pregenus_df_crrel$Genus <- rownames(pregenus_df_crrel)
+
+# Select top 10
+pregenus_df_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ]
+pretop_10_genus_crrel <- pregenus_df_crrel[1:10, ]
+
+# Plot
+ggplot(pretop_10_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus PRE-THAW CRREL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+POST THAW CRREL
+```{r}
+# Subset and summarize
+#presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")#Epregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+
+# Convert phyloseq object to dataframe
+pregenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(postgenus_abundance_crrel)
+#pregenus_df_crrel$Genus <- rownames(pregenus_df_crrel)
+
+# Select top 10
+postgenus_df_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ]
+posttop_10_genus_crrel <- postgenus_df_crrel[1:10, ]
+
+# Plot
+ggplot(posttop_10_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus POST-THAW CRREL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+FL
+
+```{r}
+# Subset and summarize
+# presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
+# pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
+
+# Convert phyloseq object to dataframe
+pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
+pregenus_df_fl$Abundance <- taxa_sums(pregenus_abundance_fl)
+# pregenus_df_fl$Genus <- rownames(pregenus_df_fl)
+
+# Select top 10
+pregenus_df_fl <- pregenus_df_fl[order(-pregenus_df_fl$Abundance), ]
+pretop_10_genus_fl <- pregenus_df_fl[1:10, ]
+
+# Plot
+ggplot(pretop_10_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus PRE-THAW FL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Convert phyloseq object to dataframe
+postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
+postgenus_df_fl$Abundance <- taxa_sums(postgenus_abundance_fl)
+# postgenus_df_fl$Genus <- rownames(postgenus_df_fl)
+
+# Select top 10
+postgenus_df_fl <- postgenus_df_fl[order(-postgenus_df_fl$Abundance), ]
+posttop_10_genus_fl <- postgenus_df_fl[1:10, ]
+
+# Plot
+ggplot(posttop_10_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus POST-THAW FL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
+
+```{r}
+# TOP 5 Genus pre-thaw -- FL
+presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
+# Summarize taxa at the Phylum level
+pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
+pregenus_df_fl$Abundance <- taxa_sums(pregenus_abundance_fl)
+
+# Summarize and sort by abundance
+pregenus_df_fl <- pregenus_df_fl[order(-pregenus_df_fl$Abundance), ]  # Sort in descending order
+pretop_5_genus_fl <- pregenus_df_fl[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(pretop_5_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus PRE-THAW FL",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# TOP 5 Genus post-thaw -- FL
+postsamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "FL")
+# Summarize taxa at the Phylum level
+postgenus_abundance_fl <- tax_glom(postsamples_fl, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
+postgenus_df_fl$Abundance <- taxa_sums(postgenus_abundance_fl)
+
+# Summarize and sort by abundance
+postgenus_df_fl <- postgenus_df_fl[order(-postgenus_df_fl$Abundance), ]  # Sort in descending order
+posttop_5_genus_fl <- postgenus_df_fl[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(posttop_5_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus POST-THAW FL",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+UT
+
+```{r}
+# Subset and summarize (if needed)
+# presamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "UT")
+# pregenus_abundance_ut <- tax_glom(presamples_ut, taxrank = "Genus")
+
+# Convert phyloseq object to dataframe
+pregenus_df_ut <- as.data.frame(tax_table(pregenus_abundance_ut))
+pregenus_df_ut$Abundance <- taxa_sums(pregenus_abundance_ut)
+# pregenus_df_ut$Genus <- rownames(pregenus_df_ut)  # Uncomment if genus is in rownames
+
+# Select top 10 genera
+pregenus_df_ut <- pregenus_df_ut[order(-pregenus_df_ut$Abundance), ]
+pretop_10_genus_ut <- pregenus_df_ut[1:10, ]
+
+# Plot
+ggplot(pretop_10_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus PRE-THAW UT",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+
+# Subset and summarize (if needed)
+# postsamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "UT")
+# postgenus_abundance_ut <- tax_glom(postsamples_ut, taxrank = "Genus")
+
+# Convert phyloseq object to dataframe
+postgenus_df_ut <- as.data.frame(tax_table(postgenus_abundance_ut))
+postgenus_df_ut$Abundance <- taxa_sums(postgenus_abundance_ut)
+# postgenus_df_ut$Genus <- rownames(postgenus_df_ut)  # Uncomment if genus is in rownames
+
+# Select top 10 genera
+postgenus_df_ut <- postgenus_df_ut[order(-postgenus_df_ut$Abundance), ]
+posttop_10_genus_ut <- postgenus_df_ut[1:10, ]
+
+# Plot
+ggplot(posttop_10_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus POST-THAW UT",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+Facet by site -- UT
+Okay now we need to clean up (color by phylum across all figures, facet by site, 
+```{r}
+
+# Add timepoint column to each dataframe
+pretop_10_genus_ut$Timepoint <- "Pre-Thaw"
+posttop_10_genus_ut$Timepoint <- "Post-Thaw"
+
+
+#combined_ut$Timepoint <- factor(combined_ut$Timepoint, levels = c("Pre-Thaw", "Post-Thaw"))
+
+
+# Combine into one dataframe
+combined_ut <- rbind(pretop_10_genus_ut, posttop_10_genus_ut)
+combined_ut$Timepoint <- factor(as.character(combined_ut$Timepoint), levels = c("Pre-Thaw", "Post-Thaw"))
+# Make sure Genus is a factor and levels are consistent
+combined_ut$Genus <- factor(combined_ut$Genus, levels = unique(combined_ut$Genus))
+
+# Plot
+ggplot(combined_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Timepoint, scales = "free_x") +
+  scale_y_log10() +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus - UT",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Facet by site --FL
+```{r}
+# Add timepoint column to each dataframe
+pretop_10_genus_fl$Timepoint <- "Pre-Thaw"
+posttop_10_genus_fl$Timepoint <- "Post-Thaw"
+
+# Combine into one dataframe
+combined_fl <- rbind(pretop_10_genus_fl, posttop_10_genus_fl)
+combined_fl$Timepoint <- factor(as.character(combined_fl$Timepoint), levels = c("Pre-Thaw", "Post-Thaw"))
+
+# Make sure Genus is a factor and levels are consistent
+combined_fl$Genus <- factor(combined_fl$Genus, levels = unique(combined_fl$Genus))
+
+# Plot
+ggplot(combined_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Timepoint, scales = "free_x") +
+  scale_y_log10() +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus - FL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+Facet by site--CRREL
+```{r}
+# Add timepoint column to each dataframe
+pretop_10_genus_crrel$Timepoint <- "Pre-Thaw"
+posttop_10_genus_crrel$Timepoint <- "Post-Thaw"
+
+# Combine into one dataframe
+combined_crrel <- rbind(pretop_10_genus_crrel, posttop_10_genus_crrel)
+combined_crrel$Timepoint <- factor(as.character(combined_crrel$Timepoint), levels = c("Pre-Thaw", "Post-Thaw"))
+
+# Make sure Genus is a factor and levels are consistent
+combined_crrel$Genus <- factor(combined_crrel$Genus, levels = unique(combined_crrel$Genus))
+
+# Plot
+ggplot(combined_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Timepoint, scales = "free_x") +
+  scale_y_log10() +
+  theme_minimal() +
+  labs(title = "Top 10 Most Abundant Genus - CRREL",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+```{r}
+# TOP 5 Genus pre-thaw -- UT
+presamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
+# Summarize taxa at the Phylum level
+pregenus_abundance_ut <- tax_glom(presamples_ut, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+pregenus_df_ut <- as.data.frame(tax_table(pregenus_abundance_ut))
+pregenus_df_ut$Abundance <- taxa_sums(pregenus_abundance_ut)
+
+# Summarize and sort by abundance
+pregenus_df_ut <- pregenus_df_ut[order(-pregenus_df_ut$Abundance), ]  # Sort in descending order
+pretop_5_genus_ut <- pregenus_df_ut[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(pretop_5_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus PRE-THAW UT",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+# TOP 5 Genus post-thaw -- UT
+postsamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "Utqiagvik")
+# Summarize taxa at the Phylum level
+postgenus_abundance_ut <- tax_glom(postsamples_ut, taxrank = "Genus")
+
+# Convert phyloseq object to a dataframe
+postgenus_df_ut <- as.data.frame(tax_table(postgenus_abundance_ut))
+postgenus_df_ut$Abundance <- taxa_sums(postgenus_abundance_ut)
+
+# Summarize and sort by abundance
+postgenus_df_ut <- postgenus_df_ut[order(-postgenus_df_ut$Abundance), ]  # Sort in descending order
+posttop_5_genus_ut <- postgenus_df_ut[1:5, ]  # Select top 5 genus
+
+# Plot using ggplot2
+ggplot(posttop_5_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus POST-THAW UT",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+Phyla as legend
+```{r}
+# Merge tax_table info and abundance into one dataframe
+pregenus_df_ut$Genus <- rownames(pregenus_df_ut)  # Keep Genus names
+pregenus_df_ut$Phylum <- pregenus_df_ut[, "Phylum"]  # Extract Phylum
+pregenus_df_ut$Genus <- factor(pregenus_df_ut$Genus, levels = pregenus_df_ut$Genus)
+
+# Plot: Genus on x-axis, Phylum as fill
+ggplot(pretop_5_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus PRE-THAW UT",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+# Add Genus and Phylum info
+postgenus_df_ut$Genus <- rownames(postgenus_df_ut)
+postgenus_df_ut$Phylum <- postgenus_df_ut[, "Phylum"]
+postgenus_df_ut$Genus <- factor(postgenus_df_ut$Genus, levels = postgenus_df_ut$Genus)
+
+# Plot
+ggplot(posttop_5_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Top 5 Most Abundant Genus POST-THAW UT",
+       x = "Genus",
+       y = "Abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
 
 Top 5 Phylum pre-thaw 
 ```{r}
@@ -196,9 +737,6 @@ plot_richness(thaw, x = "site", color = "pre_post_thaw", measures = c("Simpson")
 ```
 
 
-
-
-
 A. Obtain Shannon and Simpson metrics
 ```{r}
 # Creating a table of Simpson and Shannon diversity and run stats
@@ -241,12 +779,20 @@ dunnTest(shansimp.meta$Shannon ~ site, data = shansimp.meta)
 kruskal.test(shansimp.meta$Simpson ~ site, data = shansimp.meta)
 dunnTest(shansimp.meta$Simpson ~ site, data = shansimp.meta)
 
+# Check to see if it (Shannon) differs based on pre post thaw # use wilcoxon because we are comparing two groups
+wilcox.test(Shannon ~ pre_post_thaw, data = shansimp.meta)
+
+wilcox.test(Simpson ~ pre_post_thaw, data = shansimp.meta)
+
 # To plot with significance codes?
 kruskal(ssmeta$Shannon, ssmeta$site, group=TRUE, p.adj="bonferroni")$groups #using this to get the letter significance codes 
 dunnTest(ssmeta$Shannon ~ site, data = ssmeta)
 
-```
 
+by(shansimp.meta$Shannon, shansimp.meta$Site, 
+   function(x) wilcox.test(x ~ shansimp.meta$pre_post_thaw[shansimp.meta$Site == unique(shansimp.meta$Site)]))
+
+```
 
 
 D. Min and Max values for Shannon and Simpson
@@ -321,19 +867,13 @@ shapiro.test(sscrrel$Simpson) # p = 0.03035 # use kruskal to evaluate
 shapiro.test(ssfl$Simpson) # p = 0.00119 # use kruskal
 shapiro.test(ssut$Simpson) # p = 3.407e-05 not normally distributed, use kruskal
 ```
-Testing for differences pre-post thaw across sites
-```{r}
-# Shannon by thaw
-kruskal.test(ssmeta$Shannon ~ pre_post_thaw, data = ssmeta) # chi-squared = 14.702, df = 1, p-value = 0.0001259
-kruskal(ssmeta$Shannon, ssmeta$pre_post_thaw, group=TRUE, p.adj="bonferroni")$groups # to get significance codes
-```
-
 
 B. Test for differences between pre and post thaw samples from the same site SHANNON
 ```{r}
 # ANOVA for CRREL SHANNON
 crrelanova <- aov(Shannon ~ pre_post_thaw, data = sscrrel)
 print(crrelanova)
+summary(crrelanova)
 
 # Estimated effects may be unbalanced
 table(sscrrel$pre_post_thaw)
@@ -355,49 +895,45 @@ TukeyHSD(crrelanova)
 # Obtain significance codes for CRREL Shannon
 # Extract p-value from ANOVA summary
 crrel_anova_summary <- summary(crrelanova)
-crrel_p_value <- crrel_anova_summary[[1]]$`Pr(>F)`[1]  # Extract p-value
+crrel_shannon_p_value <- crrel_anova_summary[[1]]$`Pr(>F)`[1]  # Extract p-value
 
 ```
+
 ```{r}
 # Running Kruskal wallis on the rest of the sites since their Shannon was not normally distributed
 
 # Farmers Loop shannon
-kruskal.test(ssfl$Shannon ~ pre_post_thaw, data = ssfl) #Kruskal-Wallis chi-squared = 2.0408, df = 1, p-value = 0.1531
+kruskal.fl <- kruskal.test(ssfl$Shannon ~ pre_post_thaw, data = ssfl) #Kruskal-Wallis chi-squared = 2.0408, df = 1, p-value = 0.1531
+print(kruskal.fl)
+# Obtain significance codes for FL Shannon
 # Extract p-value from the Kruskal-Wallis test result
-fl_p_value <- kruskal_result$p.value
-
-# Function to assign significance codes
-get_significance_code <- function(p) {
-  if (p < 0.001) return("***")
-  else if (p < 0.01) return("**")
-  else if (p < 0.05) return("*")
-  else return("ns")  # Not significant
-}
-
-# Get significance code for the Kruskal-Wallis p-value
-sig_code <- get_significance_code(fl_p_value)
-
-# Create label with p-value and significance code
-kruskal_label <- paste0("p = ", signif(fl_p_value, 3), " ", sig_code)
-print(kruskal_label)  # Example: "p = 0.153 ns"
+fl_shannon_p_value <- kruskal.fl$p.value
+```
 
 
+```{r}
 # Utqiagvik shannon
-kruskal.test(ssut$Shannon ~ pre_post_thaw, data = ssut) #Kruskal-Wallis chi-squared = 8.6471, df = 1, p-value = 0.003276
+kruskal.ut<- kruskal.test(ssut$Shannon ~ pre_post_thaw, data = ssut) #Kruskal-Wallis chi-squared = 8.6471, df = 1, p-value = 0.003276
+# Extract p-value:
+ut_shannon_p_value <- kruskal.ut$p.value
 ```
 
 C. Testing for differences pre-post thaw Simpson by site
 ```{r}
 # CRREL Simpson
-kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel) # Kruskal-Wallis chi-squared = 8.8167, df = 1, p-value = 0.002985
-
+kruskal.simp.crrel <- kruskal.test(sscrrel$Simpson ~ pre_post_thaw, data = sscrrel) # Kruskal-Wallis chi-squared = 8.8167, df = 1, p-value = 0.002985
+# obtain p-value
+crrel_simp_p_value <- kruskal.simp.crrel$p.value
 
 # Farmers Loop Simpson
-kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl) # Kruskal-Wallis chi-squared = 5.898, df = 1, p-value = 0.01516
+kruskal.simp.fl<- kruskal.test(ssfl$Simpson ~ pre_post_thaw, data = ssfl) # Kruskal-Wallis chi-squared = 5.898, df = 1, p-value = 0.01516
+# obtain p-value
+fl_simp_p_value <- kruskal.simp.fl$p.value
 
 # Utqiagvik shannon
-kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut) # Kruskal-Wallis chi-squared = 7.4559, df = 1, p-value = 0.006323
-
+kruskal.simp.ut <- kruskal.test(ssut$Simpson ~ pre_post_thaw, data = ssut) # Kruskal-Wallis chi-squared = 7.4559, df = 1, p-value = 0.006323
+# obtain p-value
+ut_simp_p_value <- kruskal.simp.ut$p.value
 
 ```
 3. Obtaining average changes in shannon and simpson diversity pre to post thaw with SD
@@ -559,57 +1095,36 @@ cat("Average change in Simpson value (Post - Pre):", ut_change_in_simpson, "±",
 
 ```
 
-```{r}
-# Function to assign significance codes CRREL
-get_significance_code <- function(p) {
-  if (p < 0.001) return("***")
-  else if (p < 0.01) return("**")
-  else if (p < 0.05) return("*")
-  else return("ns")  # Not significant
-}
-
-# Get significance code
-sig_code <- get_significance_code(crrel_p_value)
-
-# Create label with p-value and significance code
-crrel_anova_label <- paste0("p = ", signif(p_value, 3), " ", sig_code)
-print(anova_label)  # Example output: "p = 0.035 *"
-
-
-# FL
-
-
-
-
-# UT
-```
-
-# Get significance code
-sig_code <- get_significance_code(crrel_p_value)
-
-# Create label with p-value and significance code
-crrel_anova_label <- paste0("p = ", signif(p_value, 3), " ", sig_code)
-print(anova_label)  # Example output: "p = 0.035 *"
-
 
 
 
 C1. Plotting data for publication (manuvering around legend re-ordering)--MOVE this later
 ```{r}
-
 library(dplyr)
+library(ggplot2)
+# Change the column name of pre-post-thaw to thaw_type
+colnames(shansimp.meta)[which(names(shansimp.meta) == "pre_post_thaw")] <- "thaw_type"
+
+```
 
 
+```{r}
+shansimp.fig <- shansimp.meta
 # Make a copy of the original dataframe
 shansimp.meta1 <- as.data.frame(shansimp.meta)
 
-# Rename the column 'pre_post_thaw' to 'thaw_type'
-colnames(shansimp.meta1)[colnames(shansimp.meta1) == "pre_post_thaw"] <- "thaw_type"
-
-# Replace 'pre_thaw' with 'no_thaw' and 'post_thaw' with 'thaw'
+# Replace 'pre' with 'no_thaw' and 'post' with 'thaw'
+#shansimp.meta1$thaw_type <- recode(shansimp.meta1$thaw_type, "pre" = "no_thaw", "post" = "thaw")
 shansimp.meta2 <- shansimp.meta1 %>%
-  mutate(thaw_type = recode(thaw_type, "pre" = "no_thaw", "post" = "thaw"))
+  mutate(thaw_type = case_when(
+    thaw_type == "pre" ~ "no_thaw",
+    thaw_type == "post" ~ "thaw",
+    TRUE ~ thaw_type # Keep other values unchanged
+  ))
+```
 
+
+```{r}
 # Now that this is changed, we can plot 
 ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
   geom_boxplot() + 
@@ -645,9 +1160,16 @@ ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
   scale_color_manual(values = thaw_colors, labels=c('Pre-thaw', 'Post-thaw')) +  # Custom colors
   theme_classic() +
   xlab("Site") +
+  theme_minimal() +
   ylab("Alpha Diversity Measure") +
-  theme(text = element_text(size = 12))
+  theme(text = element_text(size = 12)) +
+  stat_compare_means(comparisons = list(c("thaw", "no_thaw", label = "p.signif", method = "t.test", ref.group = ".all.")))
+  #stat_compare_means(comparisons = list(c("thaw", "no_thaw"), 
+                     #label = "p.signif") +
+```
 
+
+```{r}
 # Simpson Diversity Plot
 ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +  
@@ -683,10 +1205,218 @@ ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
   ylab("Alpha Diversity Measure") +
   facet_wrap(~Diversity_Metric, scales = "free_y") +  # Separate facets for Shannon and Simpson
   theme(text = element_text(size = 12)) +
-  labs(color = "Treatment") # Change legend title
+  labs(color = "Treatment") + # Change legend title
+  #stat_compare_means(comparisons = list(c("thaw", "no_thaw")
+                     #label = "p.signif") +
+  theme_minimal()
+
+```
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+# Create the plot with asterisks based on p-values
+ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  
+  scale_color_manual(values = thaw_colors, labels = c('Pre-thaw', 'Post-thaw')) +  
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +  
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment") +
+  
+  # Add significance asterisks (p.signif) and specify the test method
+  stat_compare_means(comparisons = list(c("no_thaw", "thaw")),
+                     label = "p.signif", 
+                     method = "t.test") +  # You can change the method to t.test or others
+  theme_minimal()
 
 ```
 
+
+
+```{r}
+# Plotting with significance codes
+p_values <- data.frame(
+  Diversity_Metric = c("Shannon", "Simpson"),
+  site = c("CRREL", "FL", "Utqiagvik"),  # Adjust to match your x-axis categories
+  p_value = c(0.04, 0.0029, 0.001)  # Example p-values
+)
+```
+
+```{r}
+# Load required libraries
+library(tidyr)
+library(ggplot2)
+library(ggpubr)  # For stat_compare_means
+library(ggsignif)  # For adding significance bars
+
+# Reshape data to long format for faceting
+shansimp_long <- shansimp.meta2 %>%
+  pivot_longer(cols = c(Shannon, Simpson), 
+               names_to = "Diversity_Metric", 
+               values_to = "Value")
+
+# Define custom colors
+thaw_colors <- c("no_thaw" = "#6a7bd7", "thaw" = "#e94b3c")  
+
+# Create faceted plot
+ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type, shape = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  # Add jittered points
+  scale_color_manual(values = thaw_colors, labels = c('Pre-thaw', 'Post-thaw')) +  
+  scale_shape_manual(values = c("no_thaw" = 17, "thaw" = 16),
+                     labels = c("Pre-thaw", "Post-thaw")) +  # Triangle and circle
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +  # Separate facets for Shannon and Simpson
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment") +  # Change legend title
+  # #stat_compare_means(comparisons = list(c("no_thaw", "thaw")), 
+  #                    label = "p.signif", method = "t.test") +  # Add p-values
+  # geom_signif(comparisons = list(c("no_thaw", "thaw")),
+  #             annotations = c("***"),  # Customize asterisks
+  #             y_position = max(shansimp_long$Value, na.rm = TRUE) + 0.2, 
+  #             tip_length = 0.02) +  # Adjust position
+  theme_classic()
+```
+```{r}
+# Define custom colors and shapes
+thaw_colors <- c("no_thaw" = "#6a7bd7", "thaw" = "#e94b3c")
+thaw_shapes <- c("no_thaw" = 17, "thaw" = 16)  # triangle, circle
+thaw_labels <- c("no_thaw" = "Pre-thaw", "thaw" = "Post-thaw")
+
+# Create faceted plot
+ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type, shape = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+  scale_color_manual(values = thaw_colors, labels = thaw_labels) +
+  scale_shape_manual(values = thaw_shapes, labels = thaw_labels) +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +
+  theme_classic() +
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment", shape = "Treatment") +
+  
+  
+  
+  
+  
+     geom_signif(
+    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
+    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    y_position = c(42,43),  # Adjust y-position of the annotations
+    tip_length = 0.03,
+    textsize = 8)  
+  #annotate( # unified legend title
+
+```
+```{r}
+library(ggpubr)
+
+# Filter only for Shannon
+shannon_only <- shansimp_long %>% 
+  filter(Diversity_Metric == "Shannon")
+
+shannon.plot <- ggplot(shannon_only, aes(x = site, y = Value, color = thaw_type, shape = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, position = position_dodge(width = 0.75)) +
+  geom_jitter(alpha = 0.6, size = 4, position = position_dodge(width = 0.75)) +
+  stat_compare_means(
+    aes(group = thaw_type), 
+    method = "wilcox.test", 
+    label = "p.signif",
+    label.y = max(shannon_only$Value, na.rm = TRUE) - 0.1, # adjust as needed
+    hide.ns = TRUE, 
+    size = 8, 
+    show.legend = FALSE
+  ) +
+  scale_color_manual(values = thaw_colors, labels = thaw_labels) +
+  scale_shape_manual(values = thaw_shapes, labels = thaw_labels) +
+  xlab("Site") +
+  ylab("Shannon Diversity") +
+  theme_classic() +
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment", shape = "Treatment")
+
+# Remove legend for plotting with the other simpson plot
+shannon.plot.noleg <- shannon.plot + theme(legend.position = "none")
+
+```
+Simpson plot
+```{r}
+library(ggpubr)
+
+# Filter only for Shannon
+simpson_only <- shansimp_long %>% 
+  filter(Diversity_Metric == "Simpson")
+
+simpson.plot <- ggplot(simpson_only, aes(x = site, y = Value, color = thaw_type, shape = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7, position = position_dodge(width = 0.75)) +
+  geom_jitter(alpha = 0.6, size = 4, position = position_dodge(width = 0.75)) +
+  scale_y_continuous(limits = c(0, 1.1)) +
+  stat_compare_means(
+    aes(group = thaw_type), 
+    method = "wilcox.test", 
+    label = "p.signif",
+    label.y = max(simpson_only$Value, na.rm = TRUE) + 0.1, # adjust as needed
+    hide.ns = TRUE, 
+    size = 8, 
+    show.legend = FALSE
+  ) +
+  scale_color_manual(values = thaw_colors, labels = thaw_labels) +
+  scale_shape_manual(values = thaw_shapes, labels = thaw_labels) +
+  xlab("Site") +
+  ylab("Simpson Diversity") +
+  theme_classic() +
+  theme(text = element_text(size = 12)) +
+  labs(color = "Treatment", shape = "Treatment")
+
+print(simpson.plot)
+```
+
+```{r}
+# Plot shannon and simpson plots together 
+library(ggplot2)
+library(cowplot)
+
+# Step 3: Combine all plots 
+alpha.combined_plots <- ggdraw() +
+  draw_plot(shannon.plot.noleg, x = 0,   y = 0, width = 1/2, height = 1) +  # Left image
+  draw_plot(simpson.plot,  x = 1/2, y = 0, width = 1/2, height = 1) +  # Center plot
+  theme(plot.background = element_rect(fill= "white", color = NA)) #+
+  #draw_plot_label(label = c("(A)", "(B)"), size = 16,
+                  #x = c(0.05, 0.38), y = c(1, 1))
+
+print(alpha.combined_plots)
+ggsave("~/GitHub/thaw.response/Figures/shan.simp.combo.png", alpha.combined_plots, width = 12, height = 5)
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+scale_shape_manual(values = c("no_thaw" = 17, "thaw" = 16)) +  # Triangle and circle
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +
+  theme(text = element_text(size = 12)) +
+  labs(shape = "Treatment")  # Legend title for shape
+
+```
+Left off: Trying to get significance codes on the plot but I just can't seem to figure it out, may need to ask co-authors figure out another time, need to move on 
 
 OLD CODE
 ```{r}
@@ -753,13 +1483,30 @@ plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + 
 ```
 
 
+For publication: 
+Plotting as a black and white figure, denoting pre as triangles and post as circles
+```{r}
+ggplot(shansimp_long, aes(x = site, y = Value, shape = thaw_type, color = thaw_type)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Black boxplots
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +  # Points with shape aesthetic
+  scale_shape_manual(values = c("no_thaw" = 17, "thaw" = 16)) +  # Triangle and circle
+  theme_classic() +
+  xlab("Site") +
+  ylab("Alpha Diversity Measure") +
+  facet_wrap(~Diversity_Metric, scales = "free_y") +
+  theme(text = element_text(size = 12)) +
+  labs(shape = "Treatment")  # Legend title for shape
+
+```
+
+
 Beta dispersion analysis: Permutest
 ```{r}
 # Working with distance matrices 
 # Creating a bray curtis distance matrix from our phyloseq object
 dist.bc <- distance(thaw, method = "bray")
 print(dist.bc)
-
+ord <- ordinate(thaw, method = "PCoA", distance = dist.bc)
 # Visualize
 plot_ordination(thaw, ord, color = "site", shape = "pre_post_thaw") +
   stat_ellipse(aes(group = site))
@@ -782,7 +1529,28 @@ thawOTU_bray <- vegdist(thawOTUtransform, method = "bray")
 sampledf <- data.frame(sample_data(thaw))
 
 # Adonis test (PERMANOVA)
-adonis(thawOTU_bray ~ pre_post_thaw, data = sampledf)
+permanova1 <- adonis2(thawOTU_bray ~ pre_post_thaw, data = sampledf)
+summary(permanova)
+print(permanova)
+
+# Adonis but get significance for pre_post_thaw and site
+permanova2 <- adonis2(thawOTU_bray ~ site + pre_post_thaw, data = sampledf, permutations = 999, by = "margin")
+print(permanova2)
+summary(permanova2)
+
+
+
+# Now check to see if we violate key assumption of permanova 
+site_bd <- betadisper(thawOTU_bray, sampledf$site)
+permutest(site_bd) # this is significant, which could indicate that permanova is influenced by unequal dispersion
+plot(site_bd) 
+TukeyHSD(site_bd)
+
+
+# Now checking by treatment 
+thaw_bd <-betadisper(thawOTU_bray, sampledf$pre_post_thaw)
+permutest(thaw_bd) # not significant 
+plot(thaw_bd)
 
 # Homogeneity of dispersion test for site
 beta <- betadisper(thawOTU_bray, thaw@sam_data$site) # testing the dispersion between groups (sites)
@@ -790,8 +1558,13 @@ print(beta) # dispersion is how scattered the points are
 
 #adonis2(thawOTU_bray ~ site, data=datadorm)
 
+# Homogeneity of dispersion test for pre-post thaw 
+beta_pp <- betadisper(thawOTU_bray, thaw@sam_data$pre_post_thaw)
+print(beta_pp) 
+permutest(beta_pp)
+
 # Homogeneity of dispersion test for core
-beta_core <- betadisper(thawOTU_bray, thaw@sam_data$core)
+beta_core <- betadisper(thawOTU_bray, thaw_phyloseq@sam_data$core)
 print(beta_core)
 
 # Homogeneity of dispersion test for pre post thaw 
@@ -801,9 +1574,10 @@ print(beta_pp)
 
 # Site 
 permutest(beta)
+TukeyHSD(beta)
 
 # Core 
-permutest(beta_core)
+#permutest(beta_core)
 
 # Pre post thaw 
 permutest(beta_pp)
@@ -818,37 +1592,49 @@ print(tukey_beta)
 # print(tukey_beta_core)
 
 # Tukey for pre post thaw  # not necessary since it wasnt significant
-tukey_beta_pp <- TukeyHSD(beta_pp)
+TukeyHSD(beta_pp)
 print(tukey_beta_pp)
+
+
+betadisper(thawOTU_bray, thaw@sam_data$pre_post_thaw)
+```
+```{r}
+# Permanova to quantify and test how much of the variation is explained by site and thaw 
+library(vegan)
+permav
 ```
 
 ```{r}
 # Making a data frame for PERMANOVA analysis
-datadorm <- data.frame(sample_data(dorm1rarefied)) 
+thaw.df <- data.frame(sample_data(thaw)) 
 
 # site 
-perms <- with(datadorm, how(nperm = 1000, blocks = site))
+perms <- with(thaw.df, how(nperm = 1000, blocks = site))
 # trying this with core 
 # perms_core <- with(datadorm, how(nperm = 1000, blocks = core))
 
 # pre post thaw? 
-perms_pp <- with(datadorm, how(nperm = 1000, blocks = pre_post_thaw))
+perms_pp <- with(thaw.df, how(nperm = 1000, blocks = pre_post_thaw))
 
 # Permanova assessing composition by site and pre-post thaw 
-sitethaw.pnova <- vegan::adonis2(dorm_bray ~ site + pre_post_thaw, data = datadorm)
+sitethaw.pnova <- vegan::adonis2(thaw_bray ~ site + pre_post_thaw, data = thaw.df)
 print(sitethaw.pnova)
 
 # Permanova assessing composition by core and pre post thaw 
-corethaw.pnova <- vegan::adonis2(dorm_bray ~ core + pre_post_thaw, data = datadorm)
+corethaw.pnova <- vegan::adonis2(thaw_bray ~ core + pre_post_thaw, data = thaw.df)
 print(corethaw.pnova)
 
-sitethaw.strata <- vegan::adonis2(dorm_bray ~ pre_post_thaw, permutations = perms, data = datadorm)
-print(sitethaw.strata)
+# Old code
+#sitethaw.strata <- vegan::adonis2(thaw_bray ~ pre_post_thaw, permutations = perms, data = thaw.df)
+#print(sitethaw.strata)
 
 # SAVE
-saveRDS(dorm1rarefied, "~/Desktop/dorm1.rds")
-saveRDS(dorm_bray, "~/Desktop/dormbray.rds")
- 
+#saveRDS(dorm1rarefied, "~/Desktop/dorm1.rds")
+#saveRDS(dorm_bray, "~/Desktop/dormbray.rds")
+```
+
+OLD and extra code
+```{r}
 #Alpha Diversity (this code was not used for analysis)
 min_lib <- min(sample_sums(dorm1rarefied))
 

@@ -9,9 +9,10 @@ Data we are working with here: We will be running ANOVAs on DOC data post thaw, 
 copy numbers pre thaw and copy numbers post thaw and cum respiration across sites
 
 The reason we are NOT including pre thaw data here is because the pre thaw data is not properly replicated (due to lack of soil to replicate). 
-#```{r setup, include=FALSE}
-#knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
-#```
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
+```
 
 ```{r}
 # Load libraries
@@ -32,7 +33,7 @@ library(agricolae) # used to get the significance codes from the KW test
 resp <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Respiration_cum")
 pH <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "pH")
 EC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "EC")
-TC_TN <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "TC_TN")
+TC_TN <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "TC_TN_raw_edit")
 GWC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "GWC")
 resp_tctn <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Resp_TC_TN")
 cpnumb <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "copynumber_all") 
@@ -93,7 +94,7 @@ print(phposttukey)
 
 
 2. EC
-```{r setup, include=FALSE}
+```{r}
 # NOW WE WILL LOOK AT ELECTRICAL CONDUCTIVITY (EC)
 # Subset the data 
 EC_pre_thaw <- EC[EC$pre_post_thaw == "pre", ]
@@ -126,33 +127,25 @@ tukey_cld <-multcompLetters4(ecpostaov, ECposttukey)
 print(tukey_cld)
 ```
 
-3. %C and %N
-```{r setup, include=FALSE}
+3. %C stats
+```{r}
 # Comparing % C across site
 # Checking for normality
-shapiro.test(TC_TN$C) # p = 0.2355
-TCaov <- aov(C ~ site, data = TC_TN)
-summary(TCaov)
-# Tukey
-TCtukey <- TukeyHSD(TCaov, conf.level = 0.95)
-print(TCtukey)
-
-# obtaining results with significance codes
-tukey_tc_tld <-multcompLetters4(TCaov, TCtukey)
-print(tukey_tc_tld)
-
-# Comparing % N across site 
-# Checking for normality
-shapiro.test(TC_TN$N) # p = 0. 3077 
-# ANOVA
-TNaov <- aov(N ~ site, data = TC_TN)
-summary(TNaov)
-# Tukey
-TNtukey <- TukeyHSD(TNaov, conf.level = 0.95)
-print(TNtukey)
-# obtaining results with significance codes
-tukey_tn <-multcompLetters4(TNaov, TNtukey)
+shapiro.test(TC_TN$C) # p = 0.001
+TC.kruskal <- kruskal.test(C ~ site, data = TC_TN)
+print(TC.kruskal) #p = 0.001
+dunnTest(C ~ site, data = TC_TN, method = 'bh')
 ```
+
+3A. %N stats
+```{r}
+# Now for N
+shapiro.test(TC_TN$N) # p = 0.004 so this is not normally distributed data
+TN.kruskal <- kruskal.test(N ~ site, data = TC_TN)
+print(TN.kruskal) #p = 0.001
+dunnTest(N ~ site, data = TC_TN, method = 'bh')
+```
+
 
 4. GWC
 ```{r setup, include=FALSE}
@@ -209,8 +202,9 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration)) +
   theme(text = element_text(size = 12))
 # Let's run a dunn test for respiration and site 
 dunn.resp <- dunnTest(Cumulative_Respiration ~ site, data = resp, method = 'bh')
+print(dunn.resp)
 ```
-
+1A. Plotting cumulative respiration
 ```{r}
 # Making the plot prettier for publication
 library(ggsignif)
@@ -222,29 +216,31 @@ resp$site <- factor(resp$site, levels = c("CRREL", "Utqiagvik", "FL"))
 ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
   geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
-  scale_fill_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +  # Custom colors
+  scale_fill_manual(values = c("#1b9e77", "#7570b3", "#d95f02")) +  # Custom colors
   theme_classic() +
+  scale_y_continuous(limits = c(0,1900)) +
   labs(x = "Site", 
        y = "Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
   theme(
-    text = element_text(size = 16),  
+    text = element_text(size = 12),  
     axis.text = element_text(size = 12, color = "black"),
-    axis.title = element_text(size = 12, face = "bold"),
-    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
-    legend.position = "none"  # Remove legend if unnecessary
+    #axis.title = element_text(size = 12, face = "bold"),
+    #plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    legend.position = "none", 
+        #plot.margin = margin(50, 50, 50, 50)  # top, right, bottom, left (in points)
+    # Remove legend if unnecessary
   ) +
     geom_signif(
     comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("**", "*"),  # You can manually annotate with custom significance labels
-    y_position = c(1560,1560),  # Adjust y-position of the annotations
+    annotations = c("***", "**"),  # You can manually annotate with custom significance labels
+    y_position = c(1680,1730),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8                   # Adjust the length of the annotation line
   )
 ```
 
 3. Copy number analysis pre and post thaw
-
 ```{r}
 # Subset the data first 
 pre_thaw_copy <- cpnumb[cpnumb$pre_post_thaw == "pre", ]
@@ -268,10 +264,131 @@ boxplot(copy_numb ~ site, data = cpnumb)
 boxplot(copy_numb ~ site, data = post_thaw_copy)
 ```
 
+3A. Looking at change in copy number pre_post thaw
+```{r}
+# First remove the PRE_SOIL and POST_SOIL from the names of the samples in pre_thaw copy and post_thaw copy
+post_thaw_copy$sample_ID <- sub("_POST_SOIL", "", post_thaw_copy$sample_ID)
+pre_thaw_copy$sample_ID <- sub("_PRE_SOIL", "", pre_thaw_copy$sample_ID)
+merged<- merge(pre_thaw_copy, post_thaw_copy, by = "sample_ID")
+
+# Remove the unnec
+
+# Keep all columns from pre_thaw_copy, and just the columns you need from post_thaw_copy
+# (excluding redundant ones like site, core, etc.)
+
+post <- post_thaw_copy[, c("sample_ID", "copy_numb")]
+colnames(post)[colnames(post) == "copy_numb"] <- "post_copy"
+
+pre <- pre_thaw_copy
+colnames(pre)[colnames(pre) == "copy_numb"] <- "pre_copy"
+
+# Merge, keeping one copy of shared metadata
+merged <- merge(pre, post, by = "sample_ID")
+
+merged$change_in_copy <- (merged$post_copy - merged$pre_copy)
+
+# Remove outlier
+merged <- merged[-c(9), ]
+```
+3B. Testing for significant differences of change in copy number
+```{r}
+kruskal.test(change_in_copy ~ site, data = merged)  # non-parametric
+dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
+```
+
+
+3C.Change in copy number figure
+```{r}
+# Changing the order that they appear
+merged$site <- factor(merged$site, levels = c("CRREL", "Utqiagvik", "FL"))
+ggplot(merged, aes(x = site, y = change_in_copy, fill = site)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
+  scale_fill_manual(values = c("#1b9e77", "#7570b3", "#d95f02")) +  # Custom colors
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 4500000)) +
+  labs(x = "Site", 
+       y = "Change in 16S copy number (copy number per g soil)") +
+  theme(
+    text = element_text(size = 12),  
+    axis.text = element_text(size = 12, color = "black"),
+    #axis.title = element_text(size = 12, face = "bold"),
+    #plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    legend.position = "none") +  # Remove legend if unnecessary
+    geom_signif(
+    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
+    annotations = c("*", "*"),  # You can manually annotate with custom significance labels
+    y_position = c(4000000,4095000),  # Adjust y-position of the annotations
+    tip_length = 0.03,
+    textsize = 8)
+
+
+```
+3C. Change in copy number and site stats
+```{r}
+kruskal.test(change_in_copy ~ site, data = merged)  # non-parametric
+dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
+
+```
+
+
+C and N: Plotting Raw data on the top (do box plot, I don't think it makes sense to correlate cumulative resp with pre-thaw %C and %N)
+```{r}
+# Reordering appearance of site
+TC_TN$site <- factor(TC_TN$site, levels = c("CRREL", "Utqiagvik", "FL"))
+
+ggplot(TC_TN, aes(x = site, y = C, fill = site)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
+  scale_fill_manual(values = c("#1b9e77", "#7570b3", "#d95f02")) +  # Custom colors
+  theme_classic() +
+  scale_y_continuous(limits = c(0,47)) +
+  labs(x = "Site", 
+       y = "% C") +
+  theme(
+    text = element_text(size = 12),  
+    axis.text = element_text(size = 12, color = "black"),
+    legend.position = "none") +  # Remove legend if unnecessary
+    geom_signif(
+    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
+    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    y_position = c(42,43),  # Adjust y-position of the annotations
+    tip_length = 0.03,
+    textsize = 8)    
+```
+
+Boxplot for N
+```{r}
+ggplot(TC_TN, aes(x = site, y = N, fill = site)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
+  geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
+  scale_fill_manual(values = c("#1b9e77", "#7570b3", "#d95f02")) +  # Custom colors
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 2.6)) +
+  labs(x = "Site", 
+       y = "% N") +
+  theme(
+    text = element_text(size = 12),  
+    axis.text = element_text(size = 12, color = "black"),
+    legend.position = "none") +  # Remove legend if unnecessary
+    geom_signif(
+    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
+    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    y_position = c(2.35,2.4),  # Adjust y-position of the annotations
+    tip_length = 0.03,
+    textsize = 8)  
+```
 
 
 
-4. GLM with C and N
+
+
+
+
+4. GLM with C and N - where do we merge to make resptctn, that needs to be updated with the replicates
 ```{r}
 # Trying GLM since this data is normally distributed 
 # C
@@ -295,8 +412,8 @@ ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) +
   theme(
     text = element_text(size = 16),  
     axis.text = element_text(size = 12, color = "black"),
-    axis.title = element_text(size = 12, face = "bold"),
-    plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
+    #axis.title = element_text(size = 12, face = "bold"),
+    #plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
   )
 
 ```
@@ -329,8 +446,8 @@ ggplot(resp_tctn, aes(x = N, y = Cumulative_Respiration)) +
   theme(
     text = element_text(size = 16),  
     axis.text = element_text(size = 12, color = "black"),
-    axis.title = element_text(size = 12, face = "bold"),
-    plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
+    #axis.title = element_text(size = 12, face = "bold"),
+    #plot.title = element_text(size = 12, face = "bold", hjust = 0.5)
   )
 ```
 
@@ -358,7 +475,8 @@ linearmodel_Crespcheck <- lm(Cumulative_Respiration ~ C, data = respcheck)
 print(linearmodel_Crespcheck)
 summary(linearmodel_Crespcheck)
 
-
+"#4169e1"
+"#6a7bd7"
 ```
 
 
