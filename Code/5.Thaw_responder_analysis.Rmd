@@ -141,13 +141,13 @@ thaw_response <- thaw_OTU_phyloseq %>%
 thaw_response <- otu_abs_abund + 0.01
 
 # Change the absolute abundance df to otu table object 
-#absolute_matrix <- as.matrix(absolute_otu)
+absolute_matrix <- as.matrix(absolute_otu)
 
 # Convert to an otu_table object
-#otu_abs <- otu_table(absolute_matrix, taxa_are_rows = TRUE)  # Or FALSE if samples are rows
+otu_abs <- otu_table(absolute_matrix, taxa_are_rows = TRUE)  # Or FALSE if samples are rows
 
 # Incorporating this back into phyloseq object 
-#thaw.abs <- phyloseq(otu_abs,thaw.meta,thaw_tax)
+thaw.abs <- phyloseq(otu_abs,thaw.meta,thaw_tax)
 #abs_OTU_phyloseq <- thaw.abs@otu_table
 #as.data.frame(abs_OTU_phyloseq)
 
@@ -425,7 +425,7 @@ tax_sig_up_crrel <- tax_response_crrel %>%
 top_up_crrel <- tax_sig_up_crrel %>%
   filter(!is.na(Genus)) %>%              # <- Remove NA genera
   arrange(desc(RR_crrel)) %>%
-  slice(1:100)  # changed to 100
+  slice(1:50)  # changed to 100
 
 
 crrel_plot <- ggplot(top_up_crrel, aes(x = reorder(Genus, RR_crrel), y = RR_crrel, color = Phylum)) + 
@@ -443,9 +443,9 @@ crrel_plot <- ggplot(top_up_crrel, aes(x = reorder(Genus, RR_crrel), y = RR_crre
   ) +
   labs(x = "Genus", y = "Log Response Ratio")
 
-
+crrel_plot
   
-ggsave("~/GitHub/thaw.response/Figures/crrel_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
+#ggsave("~/GitHub/thaw.response/Figures/crrel_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
 # # Top thaw decliners (negative response)
 # tax_sig_down_crrel <- tax_response_crrel %>%
 #   filter(Significance == "Down")
@@ -467,6 +467,8 @@ ggsave("~/GitHub/thaw.response/Figures/crrel_top100plot.png", width = 12, height
 - top_up_crrel
 - top_up_fl
 - top_up_ut
+
+# Changing to top 50 from each site to see if that helps with the  crowding on all sites plot
 
 
 
@@ -538,7 +540,7 @@ R_fl$ID <- rownames(R_fl)
 R_fl$Significance <- ifelse(ICl_R_fl > 0 & ICu_R_fl > 0, "Up",
                    ifelse(ICl_R_fl < 0 & ICu_R_fl < 0, "Down", "Not Significant"))
 
-sig_ASVs_fl <- R[R_fl$Significance_fl != "Not Significant", ]
+sig_ASVs_fl <- R_fl[R_fl$Significance_fl != "Not Significant", ]
 
 # Adjust for multiple comparisons 
 # Adjust for multiple comparisons 
@@ -579,7 +581,7 @@ tax_sig_up_fl <- tax_response_fl %>%
 top_up_fl <- tax_sig_up_fl %>%
     filter(!is.na(Genus)) %>%  # removing data with NA at the genus level (for plotting)
   arrange(desc(RR_fl)) %>%
-  slice(1:100)  # changed to 100
+  slice(1:50)  # changed to 100
 
 fl_plot <- ggplot(top_up_fl, aes(x = reorder(Genus, RR_fl), y = RR_fl, color = Phylum)) + 
   geom_pointrange(aes(ymin = ICl_R_fl, ymax = ICu_R_fl), color = "#d95f02") +
@@ -595,8 +597,8 @@ fl_plot <- ggplot(top_up_fl, aes(x = reorder(Genus, RR_fl), y = RR_fl, color = P
     legend.position = "none"
   ) +
   labs(x = "Genus", y = "Log Response Ratio")
-  
-ggsave("~/GitHub/thaw.response/Figures/fl_top100plot.png", width = 16.5, height = 12, units = "in", dpi = 300)
+fl_plot 
+#ggsave("~/GitHub/thaw.response/Figures/fl_top100plot.png", width = 16.5, height = 12, units = "in", dpi = 300)
 
 
 # # Top thaw decliners (negative response)
@@ -719,7 +721,7 @@ tax_sig_up_ut <- tax_response_ut %>%
 top_up_ut <- tax_sig_up_ut %>%
   filter(!is.na(Genus)) %>% 
   arrange(desc(RR_ut)) %>%
-  slice(1:100)  # change 100 to however many you want
+  slice(1:50)  # change 100 to however many you want
 
 
 ut_plot <- ggplot(top_up_ut, aes(x = reorder(Genus, RR_ut), y = RR_ut, color = Phylum)) + 
@@ -738,8 +740,8 @@ ut_plot <- ggplot(top_up_ut, aes(x = reorder(Genus, RR_ut), y = RR_ut, color = P
   labs(x = "Genus", y = "Log Response Ratio")
   
 
-
-ggsave("~/GitHub/thaw.response/Figures/ut_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
+ut_plot
+#ggsave("~/GitHub/thaw.response/Figures/ut_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
 
 ```
 
@@ -853,15 +855,24 @@ ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Family)) 
 
 
 ```{r}
+
+#Rename the sites for publication
+library(dplyr)
+
+combined_common_up <- combined_common_up %>%
+  mutate(Site = recode(Site,
+                       "CRREL" = "PT",
+                       "UT" = "BEO",
+                       "FL" = "FL"))
 library(stringr)
 # Recode site before plotting so site shows up correctly
-combined_common_up <- combined_common_up %>%
-  mutate(
-    Site = recode(Site,
-                  "CRREL" = "CRREL",
-                  "FL" = "Farmers Loop",
-                  "UT" = "Utqiagvik")
-  )
+# combined_common_up <- combined_common_up %>%
+#   mutate(
+#     Site = recode(Site,
+#                   "CRREL" = "CRREL",
+#                   "FL" = "Farmers Loop",
+#                   "UT" = "Utqiagvik")
+#   )
 
 # Remove genus = NA 
 combined_common_up <- combined_common_up %>%
@@ -900,15 +911,6 @@ combined_common_up$fold_change <- exp(combined_common_up$RR)
 
 
 
-
-
-
-
-
-
-
-
-
 Editing:
 Okay right away this is wrong because it needs to come from the top up datasets 
 ```{r}
@@ -916,7 +918,45 @@ Okay right away this is wrong because it needs to come from the top up datasets
 # First, add a column to each dataset identifying the site
 tax_sig_top_fl <- top_up_fl %>% mutate(Site = "FL")
 tax_sig_top_crrel <- top_up_crrel %>% mutate(Site = "CRREL")
-tax_sig_top_ut <- top_up_ut %>% mutate(Site = "Utqiagvik")
+tax_sig_top_ut <- top_up_ut %>% mutate(Site = "UT")
+
+# Rename the columns of each site dataset so we can merge smoothly
+
+library(dplyr)
+
+tax_sig_top_crrel <- tax_sig_top_crrel %>%
+  rename(
+    RR   = RR_crrel,
+    err_R = err_R_crrel,
+    Sig_R = Sig_R_crrel,
+    ICl   = ICl_R_crrel,
+    ICu   = ICu_R_crrel
+  ) %>%
+  mutate(original_Site = "CRREL")
+
+tax_sig_top_fl <- tax_sig_top_fl %>%
+  rename(
+    RR   = RR_fl,
+    err_R = err_R_fl,
+    Sig_R = Sig_R_fl,
+    ICl   = ICl_R_fl,
+    ICu   = ICu_R_fl
+  ) %>%
+  mutate(original_Site = "FL")
+
+tax_sig_top_ut <- tax_sig_top_ut %>%
+  rename(
+    RR   = RR_ut,
+    err_R = err_R_ut,
+    Sig_R = Sig_R_ut,
+    ICl   = ICl_R_ut,
+    ICu   = ICu_R_ut
+  ) %>%
+  mutate(original_Site = "UT")
+
+metaRR <- bind_rows(tax_sig_top_crrel, tax_sig_top_fl, tax_sig_top_ut)
+
+
 
 # Then bind them together
 metaRR <- bind_rows(tax_sig_top_crrel, tax_sig_top_fl, tax_sig_top_ut)
@@ -924,38 +964,85 @@ library(dplyr)
 library(tidyr)
 
 # Rename existing Site column to avoid conflict
+#metaRR2 <- metaRR %>%
+  #rename(original_Site = Site)
+
+#Rename the sites for publication
+library(dplyr)
+
 metaRR2 <- metaRR %>%
-  rename(original_Site = Site)
+  mutate(original_Site = recode(original_Site,
+                       "CRREL" = "PT",
+                       "UT" = "BEO",
+                       "FL" = "FL"))
 
-metaRR_long <- metaRR2 %>%
-  pivot_longer(
-    cols = matches("RR_|ICl_|ICu_"),
-    names_to = c(".value", "Site"),
-    names_pattern = "(RR|ICl|ICu)_(.*)",
-    names_repair = "unique"  # just in case
-  ) %>%
-  filter(!is.na(RR))
+# #metaRR_long <- metaRR2 %>%
+#   pivot_longer(
+#     cols = matches("RR_|ICl_|ICu_"),
+#     names_to = c(".value", "Site"),
+#     names_pattern = "(RR|ICl|ICu)_(.*)",
+#     names_repair = "unique"  # just in case
+#   ) %>%
+#   filter(!is.na(RR))
 
 
 
-ggplot(metaRR_long, aes(x = Genus, y = RR, color = Site)) +
+ggplot(metaRR2, aes(x = Genus, y = RR, color = original_Site)) +
   geom_pointrange(aes(ymin = ICl, ymax = ICu), position = position_dodge(width = 0.6)) +
   geom_hline(yintercept = 0, linetype = 2) +
   facet_wrap(~Phylum, scales = "free_x") +
   theme_classic() +
-    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 8),
+    theme(axis.text.x = element_text(angle = 70, hjust = 1, size = 6),
         strip.text = element_text(face = "bold")) +
   labs(x = "Genus", y = "Log Response Ratio",
        title = "") +
   scale_color_manual(
-    values = c("#1b9e77", "#d95f02", "#7570b3"),
+    values = c("#7570b3", "#d95f02","#1b9e77"),
     name = "Site")
 
-ggsave("~/GitHub/thaw.response/Figures/all_top100plot.png", width = 12, height = 10)
+ggsave("~/GitHub/thaw.response/Figures/all_top50plot.png", width = 12, height = 8)
 #theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
   #labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)")
+```
 
 
+```{r}
+# Trying to make the plot more readabable
+
+library(dplyr)
+library(ggplot2)
+library(tidytext)   # for reorder_within() / scale_x_reordered()
+
+# order genera within each phylum by mean RR (use median/|RR| if you prefer)
+ord <- metaRR %>%
+  group_by(Phylum, Genus) %>%
+  summarize(meanRR = mean(RR, na.rm = TRUE), .groups = "drop")
+
+plot_df <- metaRR %>%
+  left_join(ord, by = c("Phylum","Genus")) %>%
+  mutate(Genus_ord = reorder_within(Genus, meanRR, Phylum))
+
+ggplot(plot_df, aes(x = Genus_ord, y = RR, color = original_Site)) +
+  geom_pointrange(
+    aes(ymin = ICl, ymax = ICu, group = original_Site),
+    position = position_dodge(width = 0.4),
+    linewidth = 0.3
+  ) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  coord_flip() +
+  facet_wrap(~ Phylum, scales = "free_y") +
+  scale_x_reordered() +
+  theme_classic() +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10),
+    panel.spacing.y = unit(6, "pt"),
+    legend.position = "top"
+  ) +
+  guides(color = guide_legend(nrow = 1)) +
+  labs(x = "", y = "Log Response Ratio") +
+  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3"), name = "Site")
+ggsave("~/GitHub/thaw.response/Figures/all_top100plot_readable.png", width = 12, height = 8)
 ```
 
 
@@ -1044,4 +1131,179 @@ ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Phylum)) 
        title = "Common Positive Thaw Responders Across Sites")
 ```
 
+# Pre and post thaw abundance plots 
+
+
+```{r}
+library(tidyverse)
+absolute_otu <- as.data.frame(absolute_otu)
+
+
+abund_long <- absolute_otu %>%
+  rownames_to_column("Species") %>%
+  pivot_longer(-Species, names_to = "Sample", values_to = "Abundance") %>%
+  separate(Sample, into = c("Site","Rep","Time","Type"), sep = "_") %>%
+  mutate(Site = case_when(
+    str_detect(Site, "AT")  ~ "PT",
+    str_detect(Site, "BEO") ~ "BEO",
+    str_detect(Site, "FL")  ~ "FL",
+    TRUE ~ Site   # keep as-is if none match
+  ))
+
+thaw.tax <- thaw.tax %>%
+  rownames_to_column("Species")
+abund_meta <- abund_long %>%
+  left_join(thaw.tax, by = "Species")
+
+
+top_phyla <- abund_meta %>%
+  group_by(Phylum) %>%
+  summarise(total = sum(Abundance)) %>%
+  top_n(10, total) %>%
+  pull(Phylum)
+
+abund_top <- abund_meta %>%
+  mutate(Phylum = ifelse(Phylum %in% top_phyla, Phylum, "Other"))
+
+ggplot(top_phyla, aes(x = Time, y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ Site, scales = "free_y") +
+  theme_minimal() +
+  labs(y = "Absolute abundance", x = "Pre vs Post")
+
+
+
+```
+Pre post abundance plots - relative abundance 
+```{r}
+library(phyloseq)
+
+# Transform to relative abundance (per sample, sums to 1)
+thaw_relabund <- transform_sample_counts(thaw, function(x) x / sum(x))
+thaw_phylum <- tax_glom(thaw_relabund, taxrank = "Phylum")
+library(ggplot2)
+
+plot_bar(thaw_phylum, 
+         x = "Site",   # or whatever variable you have in sample_data(thaw)
+         fill = "Phylum") +
+  facet_wrap(~ Site, scales = "free_x") +   # split Pre vs Post
+  theme_minimal() +
+  ylab("Relative abundance") +
+  scale_y_continuous(labels = scales::percent)
+
+
+
+```
+
+# Running response ratio analysis with the clr transformed data to see if rarefying makes any difference in the results (to respond to reviewer 1)
+# need to do based on absolute abundance as well 
+
+# Load in data
+```{r}
+clr_data <- read.csv("~/GitHub/thaw.response/Data/ASV_table_clr_transformed_wide_format.csv")
+```
+
+
+3A. Assessing thaw response (all 3 sites combined and all responders)
+```{r}
+
+# dont know why i had to remove samples 41 and 42 from the line of number code below 
+ToF <- clr_data #changed from thaw_response to thaw.abs
+#ToF[ToF > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices <- grep("PRE", names(clr_data))
+post_col_indices <- grep("POST", names(clr_data))
+
+pre_col_indices
+post_col_indices
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+# Control (your first list)
+
+ave1 = apply(clr_data[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,mean,na.rm = TRUE);#Control
+ave2 = apply(clr_data[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,mean,na.rm = TRUE)# Treatment 
+
+
+# Standard Deviation of ALL samples
+sd1 = apply(clr_data[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,sd,na.rm = TRUE);# Control #
+sd2 = apply(clr_data[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1 = apply(ToF[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,sum,na.rm = TRUE); #Control#
+num2 = apply(ToF[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,sum,na.rm = TRUE) # Treatment
+
+```
+3B. Response ratio calculations (all sites)
+```{r}
+# Response ratio calculations
+# Sample variance
+v1 = sd1^2/(ave1^2*num1); # Control #
+v2 = sd2^2/(ave2^2*num2) # treatment #
+
+# Square root of variance 
+sqv = sqrt(v1+v2)
+
+# RR = Response ratio
+RR = log(ave2/ave1)
+```
+
+3C. Confidence interval (all sites)
+```{r}
+# Confidence interval
+
+ICl_R = RR-1.96*sqv
+ICu_R = RR+1.96*sqv
+
+# Error 
+err_R = ICu_R-RR
+
+# Significance
+Sig_R = ICl_R*ICu_R
+Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
+
+R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
+# Create a new column from row names 
+R$ID <- rownames(R)
+
+#selecting rows (ASV's) with significance & values #
+R$Significance <- ifelse(ICl_R > 0 & ICu_R > 0, "Up",
+                   ifelse(ICl_R < 0 & ICu_R < 0, "Down", "Not Significant"))
+
+sig_ASVs <- R[R$Significance != "Not Significant", ]
+
+# Adjust for multiple comparisons 
+z_scores <- RR / sqv
+p_vals <- 2 * pnorm(-abs(z_scores))  # two-tailed test
+p_adj <- p.adjust(p_vals, method = "fdr")
+
+R$p_value <- p_vals
+R$p_adj <- p_adj
+R$Significant_FDR <- p_adj < 0.05
+
+thaw.tax <- as.data.frame(thaw_tax)
+
+tax_response <- left_join(R, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig <- tax_response %>% filter(Significance != "Not Significant")
+
+tax_sig_top <- tax_sig %>%
+  arrange(desc(abs(RR))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+
+```
 

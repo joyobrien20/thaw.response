@@ -200,6 +200,7 @@ pre.plot <- ggplot(pre_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respi
   theme(text = element_text(size = 12)) +
   theme_classic()
 
+print(pre.plot)
 ```
 
 2. Looking at post-thaw copy number and cumulative respiration
@@ -482,6 +483,15 @@ ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration,
 
 ```
 ```{r}
+# Rename the sites for publication
+library(dplyr)
+
+combined_respcpnumb <- combined_respcpnumb %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
+
 ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration, color = site, shape = pre_post_thaw)) +
   geom_smooth(
     method = "lm", 
@@ -500,12 +510,12 @@ ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration,
   scale_y_log10() +
   labs(
     x = expression("log"[10] * " Copy number g"^{-1} * " soil"),
-    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g C-CO"[2] * " g"^{-1} * " dry soil)"),
+    y = expression("log"[10] * " Cumulative Respiration (" * mu * "g CO"[2] * "-C g"^{-1} * " dry soil)"),
     color = "Site",
     shape = "Copy number type",
     linetype = "Copy number type"
   ) +
-  scale_color_manual(values = c("#1b9e77", "#d95f02", "#7570b3")) +
+  scale_color_manual(values = c("#7570b3", "#d95f02", "#1b9e77")) +
   theme_classic() +
   theme(text = element_text(size = 12))
 

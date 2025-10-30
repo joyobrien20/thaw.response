@@ -14,6 +14,39 @@ The reason we are NOT including pre thaw data here is because the pre thaw data 
 knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
 ```
 
+
+set theme
+```{r}
+library(paletteer)
+library(ggplot2)
+theme_set(theme_classic() +
+  theme(axis.title = element_text(size = 16),
+        axis.title.x = element_text(margin = margin(t = 15, b = 15)),
+        axis.title.y = element_text(margin = margin(l = 15, r = 15)),
+        axis.text = element_text(size = 13),
+        axis.text.x = element_text(margin = margin(t = 5)),
+        axis.text.y = element_text(margin = margin(r = 5)),
+        #axis.line.x = element_line(linewidth = 1),
+        #axis.line.y = element_line(linewidth = 1),
+        axis.ticks.y.right = element_line(linewidth = 1),
+        axis.text.y.right = element_text(size = 13, margin = margin(l = 5)),
+        axis.line.y.right = element_line(linewidth = 0.1),
+        axis.ticks.x.top = element_line(linewidth = 1),
+        axis.text.x.top = element_text(size = 13, margin = margin(b = 5)),
+        axis.line.x.top = element_line(linewidth = 0.1),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.x = element_line(linewidth = 1),
+        axis.ticks.y = element_line(linewidth = 1),
+        axis.ticks.length = unit(.1, "in"),
+        panel.border = element_rect(color = "grey20", fill = NA, linewidth = 1.5),
+        legend.text = element_text(size = 14),
+        strip.text = element_text(size = 14),
+        strip.background = element_blank()
+        )) 
+colors <-paletteer_d("ggthemes::Miller_Stone")
+```
+
 ```{r}
 # Load libraries
 library(vegan)
@@ -184,6 +217,15 @@ PART 2: COMPARING PRE AND POST THAW BIOTIC SOIL PROPERTIES
 
 1. Cumulative Respiration
 ```{r}
+# Renaming sites in Resp dataset 
+library(dplyr)
+
+resp <- resp %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
+
 # Let's look at the differences in cumulative respiration across sites 
 shapiro.test(resp$Cumulative_Respiration) #this is not normally distributed W = 0.89709, p-value = 0.01868
 # Because of that, lets look at a Kruskal test
@@ -209,7 +251,7 @@ print(dunn.resp)
 # Making the plot prettier for publication
 library(ggsignif)
 # Re-order the sites in the plot to tell the story
-resp$site <- factor(resp$site, levels = c("CRREL", "Utqiagvik", "FL"))
+resp$site <- factor(resp$site, levels = c("PT", "BEO", "FL"))
 
 # Get the statistical significance codes
 
@@ -220,7 +262,7 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) +
   theme_classic() +
   scale_y_continuous(limits = c(0,1900)) +
   labs(x = "Site", 
-       y = "Cumulative Respiration (µg C-CO2 g-1 dry soil)") +
+        y = expression("Cumulative Respiration (" * mu * g~CO[2]*"-C"~g^-1~"dry soil)")) +
   theme(
     text = element_text(size = 12),  
     axis.text = element_text(size = 12, color = "black"),
@@ -229,9 +271,9 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) +
     legend.position = "none", 
         #plot.margin = margin(50, 50, 50, 50)  # top, right, bottom, left (in points)
     # Remove legend if unnecessary
-  ) +
+ ) +
     geom_signif(
-    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
     annotations = c("***", "**"),  # You can manually annotate with custom significance labels
     y_position = c(1680,1730),  # Adjust y-position of the annotations
@@ -239,7 +281,6 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) +
     textsize = 8                   # Adjust the length of the annotation line
   )
 ```
-
 3. Copy number analysis pre and post thaw
 ```{r}
 # Subset the data first 
@@ -289,6 +330,15 @@ merged$change_in_copy <- (merged$post_copy - merged$pre_copy)
 
 # Remove outlier
 merged <- merged[-c(9), ]
+
+# Rename the sites for publication
+library(dplyr)
+
+merged <- merged %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
 ```
 3B. Testing for significant differences of change in copy number
 ```{r}
@@ -300,7 +350,7 @@ dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
 3C.Change in copy number figure
 ```{r}
 # Changing the order that they appear
-merged$site <- factor(merged$site, levels = c("CRREL", "Utqiagvik", "FL"))
+merged$site <- factor(merged$site, levels = c("PT", "BEO", "FL"))
 ggplot(merged, aes(x = site, y = change_in_copy, fill = site)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
   geom_jitter(width = 0.2, alpha = 0.6, size = 2) + # Add jittered points
@@ -316,7 +366,7 @@ ggplot(merged, aes(x = site, y = change_in_copy, fill = site)) +
     #plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
     legend.position = "none") +  # Remove legend if unnecessary
     geom_signif(
-    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
     annotations = c("*", "*"),  # You can manually annotate with custom significance labels
     y_position = c(4000000,4095000),  # Adjust y-position of the annotations
@@ -335,8 +385,18 @@ dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
 
 C and N: Plotting Raw data on the top (do box plot, I don't think it makes sense to correlate cumulative resp with pre-thaw %C and %N)
 ```{r}
+
+
+# Rename the sites for publication
+library(dplyr)
+
+TC_TN <- TC_TN %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
 # Reordering appearance of site
-TC_TN$site <- factor(TC_TN$site, levels = c("CRREL", "Utqiagvik", "FL"))
+TC_TN$site <- factor(TC_TN$site, levels = c("PT", "BEO", "FL"))
 
 ggplot(TC_TN, aes(x = site, y = C, fill = site)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Remove outliers for clarity
@@ -351,7 +411,7 @@ ggplot(TC_TN, aes(x = site, y = C, fill = site)) +
     axis.text = element_text(size = 12, color = "black"),
     legend.position = "none") +  # Remove legend if unnecessary
     geom_signif(
-    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
     annotations = c("***", "*"),  # You can manually annotate with custom significance labels
     y_position = c(42,43),  # Adjust y-position of the annotations
@@ -374,7 +434,7 @@ ggplot(TC_TN, aes(x = site, y = N, fill = site)) +
     axis.text = element_text(size = 12, color = "black"),
     legend.position = "none") +  # Remove legend if unnecessary
     geom_signif(
-    comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
+    comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
     annotations = c("***", "*"),  # You can manually annotate with custom significance labels
     y_position = c(2.35,2.4),  # Adjust y-position of the annotations

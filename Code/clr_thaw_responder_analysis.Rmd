@@ -1,0 +1,278 @@
+---
+title: "Clr_thaw_responder_analysis"
+author: "Joy O'Brien"
+date: "2025-08-28"
+output: html_document
+---
+
+1. Load libraries
+```{r}
+# Load the necessary libraries
+#install.packages("mctoolsr")
+#library(mctoolsr)
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(multcompView)
+library(phyloseq)
+library(readxl)
+library(biomformat)
+library(readr)
+library(readxl)
+library(ARPobservation)
+```
+
+
+2. Load data
+```{r}
+clr_data <- read.csv("~/GitHub/thaw.response/Data/ASV_table_clr_transformed_wide_format.csv")
+thaw.meta <- read_rds("~/GitHub/thaw.response/Data/thaw_metadata_phyloseq.rds")
+thaw_tax <- read_rds("~/GitHub/thaw.response/Data/thaw_tax_phyloseq.rds")
+# Changing the ASV_ID to rownames
+library(tibble)
+clr_data <- clr_data %>%
+  column_to_rownames(var = "ASV_ID")
+# Making the clr_data thaw_response so the rest of the code will run smoothly
+thaw_response <- clr_data %>%
+  data.frame()
+
+# Note: not scaling up by 0.01 because we do not have 0's in this OTU table
+
+```
+
+3. Start thaw responder analysis
+```{r}
+ToF <- thaw_response
+#ToF[ToF > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices <- grep("PRE", names(thaw_response))
+post_col_indices <- grep("POST", names(thaw_response))
+
+pre_col_indices
+post_col_indices
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+# Control (your first list)
+
+ave1 = apply(clr_data[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,mean,na.rm = TRUE);#Control
+ave2 = apply(clr_data[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,mean,na.rm = TRUE)# Treatment 
+
+
+# Standard Deviation of ALL samples
+sd1 = apply(clr_data[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,sd,na.rm = TRUE);# Control #
+sd2 = apply(clr_data[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1 = apply(ToF[,c(3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,46,48,50,52)],1,sum,na.rm = TRUE); #Control#
+num2 = apply(ToF[,c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,45,47,49,51)],1,sum,na.rm = TRUE) # Treatment
+```
+
+```{r}
+# Response ratio calculations
+# Sample variance
+v1 = sd1^2/(ave1^2*num1); # Control #
+v2 = sd2^2/(ave2^2*num2) # treatment #
+
+# Square root of variance 
+sqv = sqrt(v1+v2)
+
+# RR = Response ratio
+RR = log(ave2/ave1)
+
+# Look at the RR
+RR.df <- as.data.frame(RR)
+```
+3C. Confidence interval (all sites)
+```{r}
+
+# Confidence interval
+
+ICl_R = RR-1.96*sqv
+ICu_R = RR+1.96*sqv
+
+# Error 
+err_R = ICu_R-RR
+
+# Significance
+Sig_R = ICl_R*ICu_R
+Sig_adjust_R <- p.adjust(Sig_R, method = "fdr") 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R = as.data.frame(cbind(RR,err_R,Sig_R, ICl_R, ICu_R))
+
+R_adjust <- as.data.frame(cbind(RR,err_R,Sig_adjust_R, ICl_R, ICu_R))
+# Create a new column from row names 
+R$ID <- rownames(R)
+
+#selecting rows (ASV's) with significance & values #
+R$Significance <- ifelse(ICl_R > 0 & ICu_R > 0, "Up",
+                   ifelse(ICl_R < 0 & ICu_R < 0, "Down", "Not Significant"))
+
+sig_ASVs <- R[R$Significance != "Not Significant", ]
+
+# Adjust for multiple comparisons 
+z_scores <- RR / sqv
+p_vals <- 2 * pnorm(-abs(z_scores))  # two-tailed test
+p_adj <- p.adjust(p_vals, method = "fdr")
+
+R$p_value <- p_vals
+R$p_adj <- p_adj
+R$Significant_FDR <- p_adj < 0.05
+
+thaw.tax <- as.data.frame(thaw_tax)
+
+tax_response <- left_join(R, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig <- tax_response %>% filter(Significance != "Not Significant")
+
+
+
+ggplot(tax_sig, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+
+
+
+
+
+
+tax_sig_top <- tax_sig %>%
+  arrange(desc(abs(RR))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top, aes(x = reorder(ID, RR), y = RR, color = Phylum)) +
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+
+```
+
+```{r}
+#Significant thaw responders only 
+tax_sig_up <- tax_response %>%
+  filter(Significance == "Up")
+
+top_up <- tax_sig_up %>%
+  arrange(desc(RR)) %>%
+  slice(1:100)  # change 20 to however many you want
+
+ggplot(top_up, aes(x = reorder(ID, RR), y = RR, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+
+
+```
+```{r}
+# Subset the data out for CRREL sites
+thaw_response <- as.data.frame(thaw_response)
+t.r.crrel <- as.data.frame(thaw_response %>% select(matches("AT3|AT4")))
+ToF_crrel <- t.r.crrel;
+ToF_crrel[ToF_crrel > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
+
+# Which columns are post and which are pre (for the controls and treatment)
+pre_col_indices_crrel <- grep("PRE", names(t.r.crrel))
+post_col_indices_crrel <- grep("POST", names(t.r.crrel))
+
+pre_col_indices_crrel
+post_col_indices_crrel
+
+grep("PRE", colnames(t.r.crrel))
+grep("POST", colnames(t.r.crrel))
+
+
+# Using relative abundance table, creates average
+# treatment_names <- c("sample1", "sample2"...)
+ave1_crrel = apply(t.r.crrel[,c(4, 6, 8, 10, 12)],1,mean,na.rm = TRUE);# Control
+ave2_crrel = apply(t.r.crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,mean,na.rm = TRUE)# Treatment 
+
+# Standard Deviation of ALL samples
+sd1_crrel = apply(t.r.crrel[,c(4,6,8,10,12)],1,sd,na.rm = TRUE);# Control #
+sd2_crrel = apply(t.r.crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,sd,na.rm = TRUE)# treatment # 
+
+# How many encounters for ASV number of observations
+num1_crrel= apply(ToF_crrel[,c(4, 6, 8, 10, 12)],1,sum,na.rm = TRUE); #Control#
+num2_crrel = apply(ToF_crrel[,c(1, 2, 3, 5, 7, 9, 11)],1,sum,na.rm = TRUE) # Treatment #
+
+# Response ratio calculations
+# Sample variance
+v1_crrel = sd1_crrel^2/(ave1_crrel^2*num1_crrel); # Control 
+v2_crrel= sd2_crrel^2/(ave2_crrel^2*num2_crrel) # treatment
+
+# Square root of variance 
+sqv_crrel = sqrt(v1_crrel+v2_crrel)
+
+# RR = Response ratio
+RR_crrel = log(ave2_crrel/ave1_crrel)
+
+# Confidence interval
+
+ICl_R_crrel = RR_crrel-1.96*sqv_crrel
+ICu_R_crrel = RR_crrel+1.96*sqv_crrel
+
+# Error 
+err_R_crrel = ICu_R_crrel-RR_crrel
+
+# Significance
+Sig_R_crrel = ICl_R_crrel*ICu_R_crrel
+Sig_adjust_R_crrel <- p.adjust(Sig_R_crrel, method = "fdr") # only 1 asv is significant ?? 
+
+# Creating data frame w/ 3 coloums (RR, err, Sig) 
+R_crrel = as.data.frame(cbind(RR_crrel,err_R_crrel,Sig_R_crrel, ICl_R_crrel, ICu_R_crrel))
+# Creating data frame adjusted 
+R_adjust_crrel <- as.data.frame(cbind(RR_crrel,err_R_crrel,Sig_adjust_R_crrel, ICl_R_crrel, ICu_R_crrel))
+
+# Create a new column from row names 
+R_crrel$ID <- rownames(R_crrel)
+
+#selecting rows (ASV's) with significance & values #
+R_crrel$Significance <- ifelse(ICl_R_crrel > 0 & ICu_R_crrel > 0, "Up",
+                   ifelse(ICl_R_crrel < 0 & ICu_R_crrel < 0, "Down", "Not Significant"))
+
+sig_ASVs_crrel <- R_crrel %>%
+  filter(Significance != "Not Significant")
+```
+```{r}
+# Adjust for multiple comparisons 
+z_scores_crrel <- RR_crrel / sqv_crrel
+p_vals_crrel <- 2 * pnorm(-abs(z_scores_crrel))  # two-tailed test
+p_adj_crrel <- p.adjust(p_vals_crrel, method = "fdr")
+
+R_crrel$p_value <- p_vals_crrel
+R_crrel$p_adj <- p_adj_crrel
+R_crrel$Significant_FDR <- p_adj_crrel < 0.05
+
+thaw.tax <- as.data.frame(thaw_tax)
+tax_response_crrel <- left_join(R_crrel, thaw.tax %>% mutate(ID = rownames(thaw.tax)), by = "ID")
+
+tax_sig_crrel <- tax_response_crrel %>% filter(Significance != "Not Significant")
+tax_sig_top_crrel <- tax_sig_crrel %>%
+  arrange(desc(abs(RR_crrel))) %>%
+  slice(1:100)
+
+ggplot(tax_sig_top_crrel, aes(x = reorder(ID, RR_crrel), y = RR_crrel, color = Phylum)) + 
+  geom_pointrange(aes(ymin = ICl_R_crrel, ymax = ICu_R_crrel)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~Phylum, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
+  labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
+```
+
+

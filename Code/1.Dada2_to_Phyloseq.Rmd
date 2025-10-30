@@ -79,8 +79,8 @@ OLD
 ```{r}
 # Read the data into R from excel file incubation_16S_reseq.xlsx 
 seq_tab.raw <- readRDS("~/GitHub/thaw.response/Data/new_mergedASVtab_Joy.rds") # fill this in with the file path for your DADA2 seqtab output
-taxonomy <- read("~/GitHub/Masters_publication/meta_sequence_data.xlsx", sheet = "tax_final_dada2merge", na = c("","NA")) # fill this in with the tax_final file DADA2 output
-metadata <- read_excel("~/GitHub/Masters_publication/meta_sequence_data.xlsx", sheet = "metadata_final_combined") # fill this in with the metadata file
+taxonomy <- read_excel("~/GitHub/thaw.response/meta_sequence_data.xlsx", sheet = "tax_final_dada2merge", na = c("","NA")) # fill this in with the tax_final file DADA2 output
+metadata <- read_excel("~/GitHub/thaw.response/meta_sequence_data.xlsx", sheet = "metadata_final_combined") # fill this in with the metadata file
 ```
 
 OLD
@@ -138,6 +138,21 @@ thaw_noblank <- subset_samples(thaw1, !(sample_ID %in% c("PCR_BLANK", "DNA_BLANK
 # Check to see if samples were removed (should be 5 for the re-seq round)
 thaw_noblank # this checks out, 6 samples were removed
 ```
+```{r}
+# Filtered but not rarefied ASV table for clr normalization post-reviewer check 
+ASV_tab <- as.data.frame(thaw1@otu_table)
+mapping_tab <- as.data.frame(thaw1@sam_data)
+
+mapping_tab <- data.frame(mapping_tab)
+
+
+
+#saveRDS(ASV_tab,"~/GitHub/thaw.response/Data/ASV_table_prerare.rds")
+write.csv(ASV_tab, "~/GitHub/thaw.response/Data/ASV_table_prerare.csv", row.names = FALSE)
+#saveRDS(mapping_tab, "~/GitHub/thaw.response/Data/mapping_file.rds")
+write.csv(mapping_tab, "~/GitHub/thaw.response/Data/mapping_file.csv", row.names = FALSE)
+```
+
 
 ```{r}
 # Extract the OTU table from the phyloseq object
@@ -415,6 +430,9 @@ plot_ordination(
 Okay so the above code shows the lines by core 
 but we want to connect lines to inidivudal samples
 ```{r}
+
+
+
 library(dplyr)
 library(tidyr)
 library(phyloseq)
@@ -478,7 +496,111 @@ base_plot +
     labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
   )
 ```
+# Plotting with correct codes for sites post-review 
 ```{r}
+library(dplyr)
+library(tidyr)
+library(phyloseq)
+library(ggplot2)
+library(forcats)
+
+# 1. Extract ordination scores from your PCoA object
+ordination_scores <- as.data.frame(thaw.pcoa$vectors)
+ordination_scores$sample_ID <- rownames(ordination_scores)
+
+# 2. Extract metadata from phyloseq
+metadata <- data.frame(sample_data(thaw.rarify))
+metadata$sample_ID <- rownames(metadata)
+
+# 3. Merge ordination scores with metadata
+ordination_scores <- left_join(ordination_scores, metadata, by = "sample_ID")
+
+# 4. Create a cleaned pair_ID by removing the pre/post suffix from sample_ID
+#    Adjust regex to your sample ID naming pattern as needed
+ordination_scores <- ordination_scores %>%
+  mutate(
+    pair_ID = gsub("_(PRE|POST).*", "", sample_ID),
+    pre_post_thaw = factor(
+      tolower(pre_post_thaw),
+      levels = c("pre", "post")   # force "pre" before "post"
+    )
+  )
+
+
+# 5. Pivot to get pre and post sample coordinates side-by-side for line plotting
+line_segments <- ordination_scores %>%
+  select(pair_ID, pre_post_thaw, Axis.1, Axis.2) %>%
+  pivot_wider(names_from = pre_post_thaw, values_from = c(Axis.1, Axis.2)) %>%
+  drop_na()  # drop pairs where either pre or post is missing
+
+# --- Rename and order site labels in the phyloseq object ---
+sd <- data.frame(sample_data(thaw.rarify))
+
+sd$site <- recode(sd$site,
+  "CRREL"     = "PT",
+  "Utqiagvik" = "BEO",
+  "FL"        = "FL"
+)
+
+# set the display order in legend, if you like
+sd$site <- factor(sd$site,
+  levels = c("PT", "BEO", "FL")
+)
+
+sd$pre_post_thaw <- factor(
+  tolower(sd$pre_post_thaw),
+  levels = c("pre", "post")
+)
+sample_data(thaw.rarify) <- sample_data(sd)
+
+
+base_plot <- plot_ordination(
+  physeq = thaw.rarify,
+  ordination = thaw.pcoa,
+  color = "site",
+  shape = "pre_post_thaw"
+)
+
+base_plot +
+  geom_segment(
+    data = line_segments,
+    aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
+    linetype = "dotted", color = "black", inherit.aes = FALSE
+  ) +
+  geom_point(alpha = 0.7, size = 4) +
+  geom_point(size = 2) +
+  theme_classic() +
+  theme(axis.text = element_text(size = 18)) +
+  labs(
+    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
+  ) +
+  scale_color_manual(
+    name = "Site",
+    breaks = c("PT", "BEO", "FL"),
+    values = c(
+      "PT" = "#1b9e77",
+      "BEO"               = "#7570b3",
+      "FL"                 = "#d95f02"
+    )
+  ) +
+  scale_shape_manual(
+    name   = "Treatment",
+    values = c(pre = 1, post = 16),
+    labels = c(pre = "Pre-thaw", post = "Post-thaw")
+  )
+
+```
+
+
+
+
+
+
+
+
+```{r}
+
 base_plot +
   geom_segment(
     data = line_segments,
@@ -615,5 +737,9 @@ saveRDS(thaw.rarify@tax_table,"~/GitHub/thaw.response/Data/thaw_tax_phyloseq.rds
 saveRDS(thaw.rarify@sam_data,"~/GitHub/thaw.response/Data/thaw_metadata_phyloseq.rds")
 ```
 
+To satisfy reviewers, showing abundance pre and post thaw 
+```{r}
+
+```
 
 ```{r}

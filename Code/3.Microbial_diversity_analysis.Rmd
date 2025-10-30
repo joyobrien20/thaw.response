@@ -34,6 +34,23 @@ library("agricolae") # used to get significance codes
 # Load in the phyloseq object
 thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
 ```
+
+```{r}
+plot_bar(thaw, "Phylum", fill = "Phylum", facet_grid = ~site)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 0. Looking at top phylum and classes for fun
 ```{r}
 
@@ -234,6 +251,7 @@ ggplot(posttop_5_genus, aes(x = reorder(Genus, -Abundance), y = Abundance, fill 
 Should this be assessbed by site now?
 CRREL
 ```{r}
+# need to load thaw.abs from 5. script
 # TOP 5 Genus pre-thaw -- CRREL
 presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
 # Summarize taxa at the Phylum level
@@ -278,6 +296,166 @@ ggplot(posttop_5_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance,
        x = "Genus",
        y = "Abundance") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+
+# --- Prepare Pre-thaw data ---
+presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
+pregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(pregenus_abundance_crrel)
+pregenus_df_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ]
+pretop_10_genus_crrel <- pregenus_df_crrel[1:10, ]
+pretop_10_genus_crrel$Thaw <- "Pre"
+
+# --- Prepare Post-thaw data ---
+postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
+postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
+postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
+postgenus_df_crrel$Abundance <- taxa_sums(postgenus_abundance_crrel)
+postgenus_df_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ]
+posttop_10_genus_crrel <- postgenus_df_crrel[1:10, ]
+posttop_10_genus_crrel$Thaw <- "Post"
+
+# --- Combine Data ---
+combined_df <- bind_rows(pretop_10_genus_crrel, posttop_10_genus_crrel)
+# --- Set factor levels to ensure order ---
+combined_df$Thaw <- factor(combined_df$Thaw, levels = c("Pre", "Post"))
+
+# --- Plot with facet_wrap ---
+ggplot(combined_df, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  theme_classic() +
+  labs(title = "Top 10 Most Abundant Genus at CRREL",
+       x = "Genus",
+       y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+```
+Determining the total percentage that the top 10 make up in CRREL pre and post thaw 
+```{r}
+# TOP 15 NOT THE TOP 10
+# Determining the total percentage that the top 10 make up in CRREL pre and post thaw 
+# --- Pre-thaw ---
+presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
+pregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(pregenus_abundance_crrel)
+
+# calculate percentages BEFORE slicing top 10
+total_pre <- sum(pregenus_df_crrel$Abundance)
+pregenus_df_crrel$Percent <- (pregenus_df_crrel$Abundance / total_pre) * 100
+
+# now take top 10
+pretop_10_genus_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ][1:15, ]
+pre_top10_percent <- sum(pretop_10_genus_crrel$Percent)
+
+# --- Post-thaw ---
+postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
+postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
+postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
+postgenus_df_crrel$Abundance <- taxa_sums(postgenus_abundance_crrel)
+
+# calculate percentages BEFORE slicing top 10
+total_post <- sum(postgenus_df_crrel$Abundance)
+postgenus_df_crrel$Percent <- (postgenus_df_crrel$Abundance / total_post) * 100
+
+# now take top 10
+posttop_10_genus_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ][1:15, ]
+post_top10_percent <- sum(posttop_10_genus_crrel$Percent)
+
+# Check
+pre_top10_percent
+post_top10_percent
+
+```
+
+
+
+
+
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+
+# --- Prepare Pre-thaw data ---
+presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
+pregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
+pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
+pregenus_df_crrel$Abundance <- taxa_sums(pregenus_abundance_crrel)
+pregenus_df_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ]
+pretop_10_genus_crrel <- pregenus_df_crrel[1:15, ]
+pretop_10_genus_crrel$Thaw <- "Pre-thaw"
+
+# calculate percentages 
+total_pre <- sum(pregenus_df_crrel$Abundance)
+pregenus_df_crrel$Percent <- (pregenus_df_crrel$Abundance / total_pre) * 100
+
+# Percentage of total community represented by top 10 genera
+pre_top10_percent <- sum(pretop_10_genus_crrel$Percent)
+post_top10_percent <- sum(posttop_10_genus_crrel$Percent)
+
+pre_top10_percent
+post_top10_percent
+
+# --- Prepare Post-thaw data ---
+postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
+postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
+postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
+postgenus_df_crrel$Abundance <- taxa_sums(postgenus_abundance_crrel)
+postgenus_df_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ]
+posttop_10_genus_crrel <- postgenus_df_crrel[1:15, ]
+posttop_10_genus_crrel$Thaw <- "Post-thaw"
+
+# --- Combine Data ---
+combined_df_crrel <- bind_rows(pretop_10_genus_crrel, posttop_10_genus_crrel)
+
+# --- Set factor levels to control facet order ---
+combined_df_crrel$Thaw <- factor(combined_df_crrel$Thaw, levels = c("Pre-thaw", "Post-thaw"))
+
+# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+ggplot(combined_df_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +  # Legend shows Phylum
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+# library(paletteer)
+# phyla_colors <- c(
+#   "Firmicutes" = "#E41A1C",
+#   "Actinobacteria" = "#377EB8",
+#   "Proteobacteria" = "#4DAF4A",
+#   "Bacteroidetes" = "#984EA3",
+#   "Cyanobacteria" = "#FF7F00",
+#   "Acidobacteria" = "#FFFF33",
+#   "Verrucomicrobia" = "#A65628",
+#   "Planctomycetes" = "#F781BF",
+#   "Chloroflexi" = "#999999"
+# )
+crrel_abundance1 <- ggplot(combined_df_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  scale_fill_paletteer_d("rcartocolor::Antique") +  
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(crrel_abundance1)
 
 ```
 
@@ -430,9 +608,583 @@ ggplot(posttop_5_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fi
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+```{r}
+# Determining the total percentage that the top 15 make up in FL pre and post thaw 
+# --- Pre-thaw ---
+presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
+pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
+pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
+pregenus_df_fl$Abundance <- taxa_sums(pregenus_abundance_fl)
+
+# calculate percentages BEFORE slicing top 10
+total_pre_fl <- sum(pregenus_df_fl$Abundance)
+pregenus_df_fl$Percent <- (pregenus_df_fl$Abundance / total_pre_fl) * 100
+
+# now take top 10
+pretop_10_genus_fl <- pregenus_df_fl[order(-pregenus_df_fl$Abundance), ][1:15, ]
+pre_top10_percent_fl <- sum(pretop_10_genus_fl$Percent)
+
+# --- Post-thaw ---
+postsamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "FL")
+postgenus_abundance_fl <- tax_glom(postsamples_fl, taxrank = "Genus")
+postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
+postgenus_df_fl$Abundance <- taxa_sums(postgenus_abundance_fl)
+
+# calculate percentages BEFORE slicing top 10
+total_post_fl <- sum(postgenus_df_fl$Abundance)
+postgenus_df_fl$Percent <- (postgenus_df_fl$Abundance / total_post_fl) * 100
+
+# now take top 10
+posttop_10_genus_fl <- postgenus_df_fl[order(-postgenus_df_fl$Abundance), ][1:15, ]
+post_top10_percent_fl <- sum(posttop_10_genus_fl$Percent)
+
+# Check
+pre_top10_percent_fl
+post_top10_percent_fl
+```
+
+
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+
+# --- Prepare Pre-thaw data ---
+presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
+pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
+pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
+pregenus_df_fl$Abundance <- taxa_sums(pregenus_abundance_fl)
+pregenus_df_fl <- pregenus_df_fl[order(-pregenus_df_fl$Abundance), ]
+pretop_10_genus_fl <- pregenus_df_fl[1:15, ]
+pretop_10_genus_fl$Thaw <- "Pre-thaw"
+
+
+
+# --- Prepare Post-thaw data ---
+postsamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "FL")
+postgenus_abundance_fl <- tax_glom(postsamples_fl, taxrank = "Genus")
+postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
+postgenus_df_fl$Abundance <- taxa_sums(postgenus_abundance_fl)
+postgenus_df_fl <- postgenus_df_fl[order(-postgenus_df_fl$Abundance), ]
+posttop_10_genus_fl <- postgenus_df_fl[1:15, ]
+posttop_10_genus_fl$Thaw <- "Post-thaw"
+
+# --- Combine Data ---
+combined_df_fl <- bind_rows(pretop_10_genus_fl, posttop_10_genus_fl)
+
+# --- Set factor levels to control facet order ---
+combined_df_fl$Thaw <- factor(combined_df_fl$Thaw, levels = c("Pre-thaw", "Post-thaw"))
+
+# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+ggplot(combined_df_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +  # Legend shows Phylum
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+library(paletteer)
+
+# phyla_colors <- c(
+#   "Firmicutes" = "#E41A1C",
+#   "Actinobacteria" = "#377EB8",
+#   "Proteobacteria" = "#4DAF4A",
+#   "Bacteroidetes" = "#984EA3",
+#   "Cyanobacteria" = "#FF7F00",
+#   "Acidobacteria" = "#FFFF33",
+#   "Verrucomicrobia" = "#A65628",
+#   "Planctomycetes" = "#F781BF",
+#   "Chloroflexi" = "#999999"
+# )
+
+fl_abundance1 <- ggplot(combined_df_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  scale_fill_paletteer_d("rcartocolor::Antique") +  
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(fl_abundance1)
+
+```
 
 UT
+```{r}
+# Determining the total percentage that the top 10 make up in UTqiagvik pre and post thaw 
+# Determining the total percentage that the top 10 make up in UTqiagvik pre and post thaw 
+# --- Pre-thaw ---
+presamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
+pregenus_abundance_UT <- tax_glom(presamples_UT, taxrank = "Genus")
+pregenus_df_UT <- as.data.frame(tax_table(pregenus_abundance_UT))
+pregenus_df_UT$Abundance <- taxa_sums(pregenus_abundance_UT)
 
+# calculate percentages BEFORE slicing top 10
+total_pre_UT <- sum(pregenus_df_UT$Abundance)
+pregenus_df_UT$Percent <- (pregenus_df_UT$Abundance / total_pre_UT) * 100
+
+# now take top 10
+pretop_10_genus_UT <- pregenus_df_UT[order(-pregenus_df_UT$Abundance), ][1:15, ]
+pre_top10_percent_UT <- sum(pretop_10_genus_UT$Percent)
+
+# --- Post-thaw ---
+postsamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "Utqiagvik")
+postgenus_abundance_UT <- tax_glom(postsamples_UT, taxrank = "Genus")
+postgenus_df_UT <- as.data.frame(tax_table(postgenus_abundance_UT))
+postgenus_df_UT$Abundance <- taxa_sums(postgenus_abundance_UT)
+
+# calculate percentages BEFORE slicing top 10
+total_post_UT <- sum(postgenus_df_UT$Abundance)
+postgenus_df_UT$Percent <- (postgenus_df_UT$Abundance / total_post_UT) * 100
+
+# now take top 10
+posttop_10_genus_UT <- postgenus_df_UT[order(-postgenus_df_UT$Abundance), ][1:15, ]
+post_top10_percent_UT <- sum(posttop_10_genus_UT$Percent)
+
+# Check
+pre_top10_percent_UT
+post_top10_percent_UT
+
+```
+
+
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(dplyr)
+
+# --- Prepare Pre-thaw data ---
+presamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
+pregenus_abundance_UT <- tax_glom(presamples_UT, taxrank = "Genus")
+pregenus_df_UT <- as.data.frame(tax_table(pregenus_abundance_UT))
+pregenus_df_UT$Abundance <- taxa_sums(pregenus_abundance_UT)
+pregenus_df_UT <- pregenus_df_UT[order(-pregenus_df_UT$Abundance), ]
+pretop_10_genus_UT <- pregenus_df_UT[1:15, ]
+pretop_10_genus_UT$Thaw <- "Pre-thaw"
+
+# --- Prepare Post-thaw data ---
+postsamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "Utqiagvik")
+postgenus_abundance_UT <- tax_glom(postsamples_UT, taxrank = "Genus")
+postgenus_df_UT <- as.data.frame(tax_table(postgenus_abundance_UT))
+postgenus_df_UT$Abundance <- taxa_sums(postgenus_abundance_UT)
+postgenus_df_UT <- postgenus_df_UT[order(-postgenus_df_UT$Abundance), ]
+posttop_10_genus_UT <- postgenus_df_UT[1:15, ]
+posttop_10_genus_UT$Thaw <- "Post-thaw"
+
+# --- Combine Data ---
+combined_df_UT <- bind_rows(pretop_10_genus_UT, posttop_10_genus_UT)
+
+# --- Set factor levels to control facet order ---
+combined_df_UT$Thaw <- factor(combined_df_UT$Thaw, levels = c("Pre-thaw", "Post-thaw"))
+
+# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+ggplot(combined_df_UT, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +  # Legend shows Phylum
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+library(paletteer)
+
+ut_abundance1 <- ggplot(combined_df_UT, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Thaw, scales = "free_x") +
+  scale_fill_paletteer_d("rcartocolor::Antique") +  
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Absolute abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(ut_abundance1)
+```
+
+
+# Facet the plots to create 1 figure
+```{r}
+library(dplyr)
+library(ggplot2)
+library(paletteer)
+
+# Combine data from all sites
+combined_df_all <- bind_rows(
+  combined_df_crrel %>% mutate(Site = "CRREL"),
+  combined_df_fl %>% mutate(Site = "FL"),
+  combined_df_UT %>% mutate(Site = "UT")
+)
+
+# Make sure Thaw is ordered
+combined_df_all$Thaw <- factor(combined_df_all$Thaw, 
+                               levels = c("Pre-thaw", "Post-thaw"))
+
+# Plot all together with consistent Phylum colors
+ggplot(combined_df_all, aes(x = reorder(Genus, -Abundance), 
+                            y = Abundance, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  facet_grid(Site ~ Thaw, scales = "free_y") +   # Sites as rows, thaw status as columns
+  scale_fill_paletteer_d("rcartocolor::Antique") +  # consistent palette across facets
+  theme_classic() +
+  labs(title = "",
+       x = "Genus",
+       y = "Relative abundance",
+       fill = "Phylum") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7))
+
+```
+
+# Faceting is probbaly not the best
+library(cowplot)
+plot_grid(p_crrel, p_fl, p_ut, ncol = 3, labels = c("CRREL", "FL", "UT"))
+```{r}
+library(cowplot)
+library(ggplot2)
+library(cowplot)
+library(paletteer)
+
+library(cowplot)
+
+# Side-by-side in one row
+final.plot <- plot_grid(crrel_abundance1, fl_abundance1, ut_abundance1,
+          ncol = 1, labels = c("A", "B", "C"))
+
+legend <- get_legend(crrel_abundance1 + theme(legend.position = "bottom"))
+
+plot_grid(
+  plot_grid(crrel_abundance1 + theme(legend.position = "none"),
+            fl_abundance1 + theme(legend.position = "none"),
+            ut_abundance1 + theme(legend.position = "none"),
+            ncol = 1, labels = c("A", "B", "C")),
+  legend,
+  ncol = 1,
+  rel_heights = c(1, 0.1)  # make legend shorter
+)
+ggsave("~/GitHub/thaw.response/Figures/abundance_sites_stacked.png", final.plot, width = 8, height = 10)
+```
+```{r}
+library(cowplot)
+library(paletteer)
+library(dplyr)
+
+# 0) Define ALL phyla across sites
+phyla_levels <- c(
+  unique(combined_df_crrel$Phylum),
+  unique(combined_df_fl$Phylum),
+  unique(combined_df_UT$Phylum)
+) %>% unique() %>% sort()
+
+# 1) Ensure each plot uses the same palette + phylum levels
+crrel_abundance1 <- crrel_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels, drop = FALSE)
+
+fl_abundance1 <- fl_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels, drop = FALSE)
+
+ut_abundance1 <- ut_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels, drop = FALSE)
+
+# 2) Make a dummy plot containing ALL phyla to extract a full legend
+dummy <- data.frame(Phylum = factor(phyla_levels, levels = phyla_levels), y = 1)
+
+legend_right <- get_legend(
+  ggplot(dummy, aes(Phylum, y, fill = Phylum)) +
+    geom_col() +
+    scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels, drop = FALSE) +
+    theme_void() +
+    theme(legend.position = "right") +
+    guides(fill = guide_legend(ncol = 1))   # vertical stack
+)
+
+# 3) Stack plots vertically without legends
+panels_stacked <- plot_grid(
+  crrel_abundance1 + theme(legend.position = "none"),
+  fl_abundance1    + theme(legend.position = "none"),
+  ut_abundance1    + theme(legend.position = "none"),
+  ncol = 1, labels = c("A", "B", "C"),
+  align = "hv", axis = "tblr"
+)
+
+# 4) Combine plots + legend (legend on the right)
+final_plot_right <- plot_grid(
+  panels_stacked, legend_right,
+  ncol = 2, rel_widths = c(1, 0.28)  # adjust 0.28 if legend needs more room
+)
+
+# 5) Save
+ggsave("~/GitHub/thaw.response/Figures/abundance_sites_stacked.png", final_plot_right, width = 12, height = 10)
+
+final_plot_right
+
+
+
+
+```
+
+
+
+```{r}
+library(ggplot2)
+library(cowplot)
+
+# ensure panel/plot bg are white on your three plots (safe to add)
+make_bg_white <- function(p) {
+  p + theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background  = element_rect(fill = "white", color = NA)
+  )
+}
+crrel_abundance1 <- make_bg_white(crrel_abundance1)
+fl_abundance1    <- make_bg_white(fl_abundance1)
+ut_abundance1    <- make_bg_white(ut_abundance1)
+
+# build the legend with explicit white backgrounds
+legend_right <- get_legend(
+  ggplot(dummy, aes(Phylum, 1, fill = Phylum)) +
+    geom_col() +
+    scale_fill_paletteer_d("rcartocolor::Antique",
+                           limits = phyla_levels, drop = FALSE) +
+    theme_void() +
+    theme(
+      legend.position      = "right",
+      legend.background    = element_rect(fill = "white", color = NA),
+      legend.box.background= element_rect(fill = "white", color = NA),
+      plot.background      = element_rect(fill = "white", color = NA)
+    ) +
+    guides(fill = guide_legend(ncol = 1))
+)
+
+# stack panels (no legends) and combine with the legend on the right
+panels_stacked <- plot_grid(
+  crrel_abundance1 + theme(legend.position = "none"),
+  fl_abundance1    + theme(legend.position = "none"),
+  ut_abundance1    + theme(legend.position = "none"),
+  ncol = 1, labels = c("A", "B", "C"),
+  align = "hv", axis = "tblr"
+)
+
+final_plot_right <- plot_grid(
+  panels_stacked, legend_right,
+  ncol = 2, rel_widths = c(1, 0.28)
+)
+
+# IMPORTANT: save with a white background (bg="white") and enough width
+ggsave("~/GitHub/thaw.response/Figures/absabundance_sites_stacked.png",
+       final_plot_right, width = 10, height = 10 , dpi = 300, bg = "white")
+
+```
+
+
+
+
+
+```{r}
+library(cowplot)
+
+# Extract shared legend from one plot (e.g., CRREL)
+shared_legend <- get_legend(
+  crrel_abundance1 + 
+    theme(legend.position = "bottom",
+          legend.title = element_text(size = 10),
+          legend.text  = element_text(size = 9))
+)
+
+# Remove legends from individual plots
+p_row <- plot_grid(
+  crrel_abundance1 + theme(legend.position = "none"),
+  fl_abundance1    + theme(legend.position = "none"),
+  ut_abundance1    + theme(legend.position = "none"),
+  ncol = 3, labels = c("A", "B", "C"), align = "hv", axis = "tblr"
+)
+
+# Stack plots + shared legend
+final_plot <- plot_grid(
+  p_row,
+  shared_legend,
+  ncol = 1,
+  rel_heights = c(1, 0.12)
+)
+
+final_plot
+ggsave("~/GitHub/thaw.response/Figures/abundance_sites.png", final_plot, width = 12, height = 6)
+
+```
+
+
+```{r}
+# Build a single vector of all phyla you want in the legend, same order for all plots
+phyla_levels <- c(
+  unique(combined_df_crrel$Phylum),
+  unique(combined_df_fl$Phylum),
+  unique(combined_df_UT$Phylum)
+) %>% unique() %>% sort()
+
+# Ensure each plot uses the same factor levels
+fix_levels <- function(df) {
+  df %>% mutate(Phylum = factor(Phylum, levels = phyla_levels))
+}
+combined_df_crrel <- fix_levels(combined_df_crrel)
+combined_df_fl    <- fix_levels(combined_df_fl)
+combined_df_UT    <- fix_levels(combined_df_UT)
+
+# Rebuild your three plots with the SAME scale (drop = FALSE!)
+crrel_abundance1 <- crrel_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique",
+                         limits = phyla_levels,
+                         drop = FALSE)
+
+fl_abundance1 <- fl_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique",
+                         limits = phyla_levels,
+                         drop = FALSE)
+
+ut_abundance1 <- ut_abundance1 +
+  scale_fill_paletteer_d("rcartocolor::Antique",
+                         limits = phyla_levels,
+                         drop = FALSE)
+
+# Now extract a shared legend that includes ALL levels
+library(cowplot)
+shared_legend <- get_legend(
+  crrel_abundance1 +
+    theme(legend.position = "bottom") +
+    guides(fill = guide_legend(nrow = 2))  # adjust rows/cols to fit
+)
+
+final_plot <- plot_grid(
+  plot_grid(
+    crrel_abundance1 + theme(legend.position = "none"),
+    fl_abundance1    + theme(legend.position = "none"),
+    ut_abundance1    + theme(legend.position = "none"),
+    ncol = 3, labels = c("A", "B", "C")
+  ),
+  shared_legend,
+  ncol = 1,
+  rel_heights = c(1, 0.14)
+)
+print(final_plot)
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(paletteer)
+
+# If you already have per-site data frames (from earlier steps):
+# combined_df_CRREL, combined_df_FL, combined_df_UT
+# Each should have columns: Genus, Phylum, Abundance, Thaw
+
+# 1) Bind all sites together and tag with site name
+combined_df_all <- bind_rows(
+  combined_df_crrel %>% mutate(Site = "CRREL"),
+  combined_df_fl    %>% mutate(Site = "FL"),
+  combined_df_UT    %>% mutate(Site = "UT")
+)
+
+# Order thaw panels
+combined_df_all <- combined_df_all %>%
+  mutate(Thaw = factor(Thaw, levels = c("Pre-thaw", "Post-thaw")))
+
+# 2) Take the TOP 10 by Site *and* Thaw
+top10_by_facet <- combined_df_all %>%
+  group_by(Site, Thaw) %>%
+  slice_max(order_by = Abundance, n = 10, with_ties = FALSE) %>%
+  ungroup()
+
+# 3) Lock Phylum colors globally so they don't shift across facets
+phyla_levels <- top10_by_facet %>% pull(Phylum) %>% unique() %>% sort()
+top10_by_facet <- top10_by_facet %>%
+  mutate(Phylum = factor(Phylum, levels = phyla_levels))
+
+# 4) Per-facet x-axis ordering WITHOUT extra packages:
+#    Build a facet-specific label (Genus|Site|Thaw) and then strip it for display
+top10_by_facet <- top10_by_facet %>%
+  mutate(Genus_facet = paste(Genus, Site, Thaw, sep = "|"))
+
+p <- ggplot(
+  top10_by_facet,
+  aes(x = reorder(Genus_facet, -Abundance), y = Abundance, fill = Phylum)
+) +
+  geom_bar(stat = "identity") +
+  facet_grid(Site ~ Thaw, scales = "free_x") +
+  # keep Phylum colors consistent across all facets
+  scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels) +
+  # show only the Genus (strip the appended facet tag)
+  scale_x_discrete(labels = function(x) sub("\\|.*$", "", x)) +
+  theme_classic() +
+  labs(
+    title = "Top 10 Genera by Site (Pre/Post-thaw)",
+    x = "Genus",
+    y = "Abundance",
+    fill = "Phylum"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(paletteer)
+
+# 1) Choose a common comparison set: top 10 genera PER THAW across all sites
+top10_each_thaw <- combined_df_all %>%
+  group_by(Thaw, Genus, Phylum) %>%
+  summarise(Total = sum(Abundance), .groups = "drop") %>%
+  group_by(Thaw) %>%
+  slice_max(order_by = Total, n = 10, with_ties = FALSE) %>%
+  ungroup()
+
+# 2) Filter original data to those genera, keep ordering nice
+plot_df <- combined_df_all %>%
+  inner_join(top10_each_thaw %>% select(Thaw, Genus, Phylum), 
+             by = c("Thaw", "Genus", "Phylum")) %>%
+  mutate(
+    Thaw  = factor(Thaw, levels = c("Pre-thaw", "Post-thaw")),
+    # order genera within each Thaw by their total abundance
+    Genus = reorder(Genus, -as.numeric(ave(Abundance, Thaw, Genus, FUN = sum)))
+  )
+
+# Lock phylum color mapping so it stays consistent
+phyla_levels <- sort(unique(plot_df$Phylum))
+plot_df$Phylum <- factor(plot_df$Phylum, levels = phyla_levels)
+
+# 3) Plot: panels are Genus (rows) x Thaw (cols); x = Site for direct across-site comparison
+ggplot(plot_df, aes(x = Site, y = Abundance, fill = Phylum)) +
+  geom_col(width = 0.7) +
+  facet_grid(Genus ~ Thaw, scales = "free_y", switch = "y") +
+  scale_fill_paletteer_d("rcartocolor::Antique", limits = phyla_levels) +
+  labs(
+    title = "Across-site comparison for top genera (per thaw state)",
+    x = "Site",
+    y = "Abundance",
+    fill = "Phylum"
+  ) +
+  theme_classic() +
+  theme(
+    strip.placement = "outside",
+    strip.text.y.left = element_text(angle = 0),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+
+UT
 ```{r}
 # Subset and summarize (if needed)
 # presamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "UT")
@@ -716,6 +1468,14 @@ ggplot(posttop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill
 ```{r}
 # Creating a table of Simpson and Shannon diversity
 shansimp <- estimate_richness(thaw, measures = c("Simpson", "Shannon"))
+# Rename the sites for publication
+library(dplyr)
+
+shansimp <- shansimp %>%
+  mutate(site = recode(Site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
 
 # Visualize shannon
 plot_richness(thaw, x = "site", color = "pre_post_thaw", measures = c("Shannon")) +
@@ -1125,6 +1885,14 @@ shansimp.meta2 <- shansimp.meta1 %>%
 
 
 ```{r}
+# Rename the sites for publication
+library(dplyr)
+
+shansimp.meta2 <- shansimp.meta2 %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
 # Now that this is changed, we can plot 
 ggplot(shansimp.meta2, aes(x = site, y = Shannon, color = thaw_type)) +
   geom_boxplot() + 
@@ -1241,7 +2009,7 @@ ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type)) +
 # Plotting with significance codes
 p_values <- data.frame(
   Diversity_Metric = c("Shannon", "Simpson"),
-  site = c("CRREL", "FL", "Utqiagvik"),  # Adjust to match your x-axis categories
+  site = c("PT", "FL", "BEO"),  # Adjust to match your x-axis categories
   p_value = c(0.04, 0.0029, 0.001)  # Example p-values
 )
 ```
@@ -1284,6 +2052,17 @@ ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type, shape = thaw_t
   theme_classic()
 ```
 ```{r}
+# Rename the sites for publication
+library(dplyr)
+
+shansimp_long <- shansimp_long %>%
+  mutate(site = recode(site,
+                       "CRREL" = "PT",
+                       "Utqiagvik" = "BEO",
+                       "FL" = "FL"))
+
+
+
 # Define custom colors and shapes
 thaw_colors <- c("no_thaw" = "#6a7bd7", "thaw" = "#e94b3c")
 thaw_shapes <- c("no_thaw" = 17, "thaw" = 16)  # triangle, circle
