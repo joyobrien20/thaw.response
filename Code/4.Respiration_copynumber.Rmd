@@ -145,7 +145,7 @@ shapiro.test(resp4copy$Cumulative_Respiration) #p-value = 0.02446 data is not no
 
 ```
 
-1. Looking at pre-thaw copy number and cumulative respiration
+5. Looking at pre-thaw copy number and cumulative respiration
 ```{r}
 # Before merging the datasets, we want to drop the PRE_SOIL from the sample ID name in pre_thaw_copy so we can smoothly merge with the resp data
 
@@ -164,13 +164,13 @@ names(pre_respcpnumb) <- sub("\\.x$", "", names(pre_respcpnumb))
 ```
 
 
-1A. Spearman Correlation for cumulative respiration and pre-thaw copy number
+5A. Spearman Correlation for cumulative respiration and pre-thaw copy number
 ```{r}
 # FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ PRE THAW COPY NUMBER 
 resp_pre_corr <- cor.test(x =pre_respcpnumb$copy_numb_gsoil, y = pre_respcpnumb$Cumulative_Respiration, method = "spearman")
 print(resp_pre_corr)
 ```
-1B. Visualize the relationship here
+5B. Visualize the relationship here
 ```{r}
 # Visualize here 
 # ggplot(pre_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
@@ -203,8 +203,7 @@ pre.plot <- ggplot(pre_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respi
 print(pre.plot)
 ```
 
-2. Looking at post-thaw copy number and cumulative respiration
-
+6. Looking at post-thaw copy number and cumulative respiration
 ```{r}
 # Before merging the datasets, we want to drop the POST_SOIL from the sample ID name in pre_thaw_copy so we can smoothly merge with the resp data
 
@@ -222,14 +221,13 @@ post_respcpnumb<- post_respcpnumb[ , !(names(post_respcpnumb) %in% c("site.y", "
 names(post_respcpnumb) <- sub("\\.x$", "", names(post_respcpnumb))
 ```
 
-2A. Spearman Correlation for cumulative respiration and post-thaw copy number
+6A. Spearman Correlation for cumulative respiration and post-thaw copy number
 ```{r}
 # FIRST LET'S RUN A CORRELATION FOR RESPIRATION ~ POST THAW COPY NUMBER 
 resp_post_corr <- cor.test(x =post_respcpnumb$copy_numb_gsoil, y = post_respcpnumb$Cumulative_Respiration, method = "spearman")
 print(resp_post_corr)
 ```
-2B. Visualizing 
-
+6B. Visualizing 
 ```{r}
 ggplot(post_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration)) + 
   geom_point(aes(color = site)) +
@@ -259,7 +257,7 @@ post.plot <- ggplot(post_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Res
   theme_classic()
 
 ```
-3. Bringing the two plots together
+7. Bringing the two plots together
 ```{r}
 # Facet 
 library(patchwork)
@@ -276,9 +274,7 @@ library(gridExtra)
 
 ```
 
-
-
-
+7A. Additional plotting code
 ```{r}
 respcpnumb <- factor(respcpnumb, levels = rev(levels(respcpnumb)))
 # Hannah's code to visualize both pre and post as a response to respiration: 
@@ -373,12 +369,11 @@ ggplot(respcpnumb_change_sub, aes(x = diff_copy_number, y = Cumulative_Respirati
 ```
 
 
-Stats
+
 ```{r}
 # Is the relationship between the change in biomass and cumulative respiration significant? 
 
 # For each site separately 
-library(dplyr)
 library(dplyr)
 
 # Separate linear models per site
@@ -392,11 +387,11 @@ anova(model_full)
 
 
 ```
+
 ```{r}
 lm(log10(Cumulative_Respiration) ~ log2_fold_change + site)
 
 ```
-
 
 ```{r}
 ancova_model <- aov(log10(Cumulative_Respiration) ~ log2_fold_change * site, data = respcpnumb_change)
@@ -410,7 +405,7 @@ plot(model_full)
 ```
 
 
-Now for stats on this 
+Linear model
 ```{r}
 #linearmodel_respcopypost <- glm(copy_number_per_gsoil_POST ~ Cumulative_Respiration, family=gaussian, data = respcpnumb)
 lm_change <- lm(Cumulative_Respiration ~ log2_fold_change + site + diff_copy_number:site, data = respcpnumb_change)
@@ -482,6 +477,7 @@ ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration,
 
 
 ```
+Plotting with Correct Site names for publication (continued)
 ```{r}
 # Rename the sites for publication
 library(dplyr)
@@ -521,7 +517,7 @@ ggplot(combined_respcpnumb, aes(x = copy_numb_gsoil, y = Cumulative_Respiration,
 
 ```
 
-Now adding inset -- this is not the vibe
+Looking to see what adding inset looks like -- this is not the vibe
 ```{r}
 library(ggplot2)
 library(patchwork)
@@ -586,13 +582,7 @@ final_plot
 library(tidyverse)
 library(ggplot2)
 
-# Assuming your data frame is called 'respcpnumb' and has columns like:
-# - Cumulative_Respiration
-# - site
-# - copy_number_pre_thaw
-# - copy_number_post_thaw
-
-# First pivot longer the pre/post copy number columns to one column, with type info
+# Pivot longer the pre/post copy number columns to one column, with type info
 respcpnumb_long <- respcpnumb %>%
   pivot_longer(
     cols = c(copy_number_pre_thaw, copy_number_post_thaw),
@@ -624,8 +614,7 @@ ggplot(respcpnumb_long, aes(x = copy_number, y = Cumulative_Respiration,
 
 ```
 
-
-Okay now we will look to see if change in copy number has any correlation with cumulative respiration
+Checking if change in copy number has any correlation with cumulative respiration
 ```{r}
 library(dplyr)
 
@@ -639,22 +628,7 @@ respcpnumb_change <- respcpnumb %>%
     diff_copy_number = copy_number_post_thaw - copy_number_pre_thaw
   )
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Old Code
 ```{r}
 # ANALYZING RESPIRATION AND PRE THAW COPY NUMBERS HERE 
 

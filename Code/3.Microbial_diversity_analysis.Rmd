@@ -4,14 +4,13 @@ author: "Joy O'Brien"
 date: "2025-03-19"
 output: html_document
 ---
-Previously micro_stats.R (April 29, 2022)
-# This script encompassess statistical tests that were performed on the phyloseq object
 
+Set wd
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 setwd("/Users/joyobrien/GitHub/thaw.response")
 ```
-
+1. Load libraries
 ```{r}
 # Load the necessary packages (this is from the phyloseq tutorial)
 library("phyloseq")
@@ -29,29 +28,16 @@ library("readxl")
 library("FSA")
 library("agricolae") # used to get significance codes 
 ```
-
+2. Load data
 ```{r}
 # Load in the phyloseq object
 thaw <- readRDS("~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
 ```
-
+3.Initial first looks at the composition
 ```{r}
 plot_bar(thaw, "Phylum", fill = "Phylum", facet_grid = ~site)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-0. Looking at top phylum and classes for fun
+3A. Looking at top phylum and classes for fun
 ```{r}
 
 # TOP 5 PHYLA
@@ -95,7 +81,6 @@ ggplot(top_10_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill = 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-0. Looking at the top phyla and classes for fun
 ```{r}
 # TOP 5 CLASSES
 # Load necessary libraries
@@ -138,9 +123,7 @@ ggplot(top_10_class, aes(x = reorder(Class, -Abundance), y = Abundance, fill = C
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
-1. Coming back to this after thaw response analysis--need to know if the common thaw responders make up a significant part of the pre thaw? 
-1A. Top 5 phyla pre-thaw 
+4A. Top 5 phyla pre-thaw 
 ```{r}
 # Okay we made the thaw.abs phyloseq object in script 1, so that we can look at absolute abundance
 
@@ -167,8 +150,7 @@ ggplot(pretop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
-1B. Top 5 phyla post thaw 
+4B. Top 5 phyla post thaw 
 ```{r}
 postsamples <- subset_samples(thaw.abs, pre_post_thaw == "post")
 # Summarize taxa at the Phylum level
@@ -195,8 +177,7 @@ ggplot(posttop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill
 
 
 
-1C. Top 5 genus pre-thaw 
-
+4C. Top 5 genus pre-thaw 
 ```{r}
 # TOP 5 PHYLA pre-thaw
 presamples <- subset_samples(thaw.abs, pre_post_thaw == "pre")
@@ -222,8 +203,7 @@ ggplot(pretop_5_genus, aes(x = reorder(Genus, -Abundance), y = Abundance, fill =
 ```
 
 
-1D. Top 5 genus post-thaw
-
+4D. Top 5 genus post-thaw
 ```{r}
 # TOP 5 PHYLA pre-thaw
 postamples <- subset_samples(thaw.abs, pre_post_thaw == "post")
@@ -248,7 +228,7 @@ ggplot(posttop_5_genus, aes(x = reorder(Genus, -Abundance), y = Abundance, fill 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Should this be assessbed by site now?
+5. Assessing by site
 CRREL
 ```{r}
 # need to load thaw.abs from 5. script
@@ -356,7 +336,7 @@ pregenus_df_crrel$Percent <- (pregenus_df_crrel$Abundance / total_pre) * 100
 pretop_10_genus_crrel <- pregenus_df_crrel[order(-pregenus_df_crrel$Abundance), ][1:15, ]
 pre_top10_percent <- sum(pretop_10_genus_crrel$Percent)
 
-# --- Post-thaw ---
+# Post-thaw
 postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
 postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
 postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
@@ -377,15 +357,13 @@ post_top10_percent
 ```
 
 
-
-
-
+Plotting pre-thaw and post-thaw composition: CRREL permafrost tunnel (PT)
 ```{r}
 library(phyloseq)
 library(ggplot2)
 library(dplyr)
 
-# --- Prepare Pre-thaw data ---
+# Prepare Pre-thaw data 
 presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")
 pregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
 pregenus_df_crrel <- as.data.frame(tax_table(pregenus_abundance_crrel))
@@ -405,7 +383,7 @@ post_top10_percent <- sum(posttop_10_genus_crrel$Percent)
 pre_top10_percent
 post_top10_percent
 
-# --- Prepare Post-thaw data ---
+# Prepare Post-thaw data
 postsamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "CRREL")
 postgenus_abundance_crrel <- tax_glom(postsamples_crrel, taxrank = "Genus")
 postgenus_df_crrel <- as.data.frame(tax_table(postgenus_abundance_crrel))
@@ -414,13 +392,13 @@ postgenus_df_crrel <- postgenus_df_crrel[order(-postgenus_df_crrel$Abundance), ]
 posttop_10_genus_crrel <- postgenus_df_crrel[1:15, ]
 posttop_10_genus_crrel$Thaw <- "Post-thaw"
 
-# --- Combine Data ---
+# Combine Data
 combined_df_crrel <- bind_rows(pretop_10_genus_crrel, posttop_10_genus_crrel)
 
-# --- Set factor levels to control facet order ---
+# Set factor levels to control facet order
 combined_df_crrel$Thaw <- factor(combined_df_crrel$Thaw, levels = c("Pre-thaw", "Post-thaw"))
 
-# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+# Plot with facet_wrap, Genus on x-axis, Phylum as fill
 ggplot(combined_df_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
   geom_bar(stat = "identity") +
   facet_wrap(~Thaw, scales = "free_x") +
@@ -430,8 +408,6 @@ ggplot(combined_df_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fil
        y = "Absolute abundance",
        fill = "Phylum") +  # Legend shows Phylum
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
 
 # library(paletteer)
 # phyla_colors <- c(
@@ -459,8 +435,7 @@ print(crrel_abundance1)
 
 ```
 
-CRREL top 10, phylum legend
-
+CRREL PT top 10, phylum legend
 ```{r}
 # Subset and summarize
 #presamples_crrel <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "CRREL")#Epregenus_abundance_crrel <- tax_glom(presamples_crrel, taxrank = "Genus")
@@ -511,9 +486,7 @@ ggplot(posttop_10_genus_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
-FL
-
+Farmer's Loop (FL)
 ```{r}
 # Subset and summarize
 # presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
@@ -609,8 +582,8 @@ ggplot(posttop_5_genus_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fi
 
 ```
 ```{r}
-# Determining the total percentage that the top 15 make up in FL pre and post thaw 
-# --- Pre-thaw ---
+# Determining the total percentage that the top 10 make up in FL pre and post thaw 
+# Pre-thaw
 presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
 pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
 pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
@@ -624,7 +597,7 @@ pregenus_df_fl$Percent <- (pregenus_df_fl$Abundance / total_pre_fl) * 100
 pretop_10_genus_fl <- pregenus_df_fl[order(-pregenus_df_fl$Abundance), ][1:15, ]
 pre_top10_percent_fl <- sum(pretop_10_genus_fl$Percent)
 
-# --- Post-thaw ---
+# Post-thaw
 postsamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "FL")
 postgenus_abundance_fl <- tax_glom(postsamples_fl, taxrank = "Genus")
 postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
@@ -649,7 +622,7 @@ library(phyloseq)
 library(ggplot2)
 library(dplyr)
 
-# --- Prepare Pre-thaw data ---
+# Prepare Pre-thaw data
 presamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "FL")
 pregenus_abundance_fl <- tax_glom(presamples_fl, taxrank = "Genus")
 pregenus_df_fl <- as.data.frame(tax_table(pregenus_abundance_fl))
@@ -660,7 +633,7 @@ pretop_10_genus_fl$Thaw <- "Pre-thaw"
 
 
 
-# --- Prepare Post-thaw data ---
+# Prepare Post-thaw data
 postsamples_fl <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "FL")
 postgenus_abundance_fl <- tax_glom(postsamples_fl, taxrank = "Genus")
 postgenus_df_fl <- as.data.frame(tax_table(postgenus_abundance_fl))
@@ -669,13 +642,13 @@ postgenus_df_fl <- postgenus_df_fl[order(-postgenus_df_fl$Abundance), ]
 posttop_10_genus_fl <- postgenus_df_fl[1:15, ]
 posttop_10_genus_fl$Thaw <- "Post-thaw"
 
-# --- Combine Data ---
+# Combine Data
 combined_df_fl <- bind_rows(pretop_10_genus_fl, posttop_10_genus_fl)
 
-# --- Set factor levels to control facet order ---
+# Set factor levels to control facet order
 combined_df_fl$Thaw <- factor(combined_df_fl$Thaw, levels = c("Pre-thaw", "Post-thaw"))
 
-# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+# Plot with facet_wrap, Genus on x-axis, Phylum as fill
 ggplot(combined_df_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
   geom_bar(stat = "identity") +
   facet_wrap(~Thaw, scales = "free_x") +
@@ -716,11 +689,10 @@ print(fl_abundance1)
 
 ```
 
-UT
+Utqiagvik, Barrow Experimental Observatory (BEO)
 ```{r}
-# Determining the total percentage that the top 10 make up in UTqiagvik pre and post thaw 
-# Determining the total percentage that the top 10 make up in UTqiagvik pre and post thaw 
-# --- Pre-thaw ---
+# Determining the total percentage that the top 10 make up in UTqiagvik pre and post thaw
+# Pre-thaw
 presamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
 pregenus_abundance_UT <- tax_glom(presamples_UT, taxrank = "Genus")
 pregenus_df_UT <- as.data.frame(tax_table(pregenus_abundance_UT))
@@ -734,7 +706,7 @@ pregenus_df_UT$Percent <- (pregenus_df_UT$Abundance / total_pre_UT) * 100
 pretop_10_genus_UT <- pregenus_df_UT[order(-pregenus_df_UT$Abundance), ][1:15, ]
 pre_top10_percent_UT <- sum(pretop_10_genus_UT$Percent)
 
-# --- Post-thaw ---
+# Post-thaw
 postsamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "Utqiagvik")
 postgenus_abundance_UT <- tax_glom(postsamples_UT, taxrank = "Genus")
 postgenus_df_UT <- as.data.frame(tax_table(postgenus_abundance_UT))
@@ -760,7 +732,7 @@ library(phyloseq)
 library(ggplot2)
 library(dplyr)
 
-# --- Prepare Pre-thaw data ---
+# Prepare Pre-thaw data
 presamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
 pregenus_abundance_UT <- tax_glom(presamples_UT, taxrank = "Genus")
 pregenus_df_UT <- as.data.frame(tax_table(pregenus_abundance_UT))
@@ -769,7 +741,7 @@ pregenus_df_UT <- pregenus_df_UT[order(-pregenus_df_UT$Abundance), ]
 pretop_10_genus_UT <- pregenus_df_UT[1:15, ]
 pretop_10_genus_UT$Thaw <- "Pre-thaw"
 
-# --- Prepare Post-thaw data ---
+# Prepare Post-thaw data 
 postsamples_UT <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "Utqiagvik")
 postgenus_abundance_UT <- tax_glom(postsamples_UT, taxrank = "Genus")
 postgenus_df_UT <- as.data.frame(tax_table(postgenus_abundance_UT))
@@ -778,13 +750,13 @@ postgenus_df_UT <- postgenus_df_UT[order(-postgenus_df_UT$Abundance), ]
 posttop_10_genus_UT <- postgenus_df_UT[1:15, ]
 posttop_10_genus_UT$Thaw <- "Post-thaw"
 
-# --- Combine Data ---
+# Combine Data 
 combined_df_UT <- bind_rows(pretop_10_genus_UT, posttop_10_genus_UT)
 
-# --- Set factor levels to control facet order ---
+# Set factor levels to control facet order 
 combined_df_UT$Thaw <- factor(combined_df_UT$Thaw, levels = c("Pre-thaw", "Post-thaw"))
 
-# --- Plot with facet_wrap, Genus on x-axis, Phylum as fill ---
+# Plot with facet_wrap, Genus on x-axis, Phylum as fill
 ggplot(combined_df_UT, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Phylum)) +
   geom_bar(stat = "identity") +
   facet_wrap(~Thaw, scales = "free_x") +
@@ -809,9 +781,7 @@ ut_abundance1 <- ggplot(combined_df_UT, aes(x = reorder(Genus, -Abundance), y = 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 print(ut_abundance1)
 ```
-
-
-# Facet the plots to create 1 figure
+Facet the abundance plots by site to create 1 figure (multiple options/ways)
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -843,9 +813,7 @@ ggplot(combined_df_all, aes(x = reorder(Genus, -Abundance),
 
 ```
 
-# Faceting is probbaly not the best
-library(cowplot)
-plot_grid(p_crrel, p_fl, p_ut, ncol = 3, labels = c("CRREL", "FL", "UT"))
+Faceting is probably not the best
 ```{r}
 library(cowplot)
 library(ggplot2)
@@ -871,6 +839,7 @@ plot_grid(
 )
 ggsave("~/GitHub/thaw.response/Figures/abundance_sites_stacked.png", final.plot, width = 8, height = 10)
 ```
+Publication plot
 ```{r}
 library(cowplot)
 library(paletteer)
@@ -926,12 +895,8 @@ ggsave("~/GitHub/thaw.response/Figures/abundance_sites_stacked.png", final_plot_
 final_plot_right
 
 
-
-
 ```
-
-
-
+Trying to adjust plot width and background
 ```{r}
 library(ggplot2)
 library(cowplot)
@@ -983,10 +948,6 @@ ggsave("~/GitHub/thaw.response/Figures/absabundance_sites_stacked.png",
 
 ```
 
-
-
-
-
 ```{r}
 library(cowplot)
 
@@ -1018,7 +979,6 @@ final_plot
 ggsave("~/GitHub/thaw.response/Figures/abundance_sites.png", final_plot, width = 12, height = 6)
 
 ```
-
 
 ```{r}
 # Build a single vector of all phyla you want in the legend, same order for all plots
@@ -1075,16 +1035,10 @@ print(final_plot)
 ```
 
 
-
-
 ```{r}
 library(dplyr)
 library(ggplot2)
 library(paletteer)
-
-# If you already have per-site data frames (from earlier steps):
-# combined_df_CRREL, combined_df_FL, combined_df_UT
-# Each should have columns: Genus, Phylum, Abundance, Thaw
 
 # 1) Bind all sites together and tag with site name
 combined_df_all <- bind_rows(
@@ -1184,7 +1138,7 @@ ggplot(plot_df, aes(x = Site, y = Abundance, fill = Phylum)) +
 ```
 
 
-UT
+Plotting by site again (Utqiagvik/BEO)
 ```{r}
 # Subset and summarize (if needed)
 # presamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "UT")
@@ -1210,9 +1164,6 @@ ggplot(pretop_10_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fi
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-
-
-
 # Subset and summarize (if needed)
 # postsamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "post" & site == "UT")
 # postgenus_abundance_ut <- tax_glom(postsamples_ut, taxrank = "Genus")
@@ -1236,10 +1187,9 @@ ggplot(posttop_10_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, f
        fill = "Phylum") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
 ```
-Facet by site -- UT
-Okay now we need to clean up (color by phylum across all figures, facet by site, 
+Facet by site (BEO/UT)
+Okay now we need to clean up (color by phylum across all figures, facet by site)
 ```{r}
 
 # Add timepoint column to each dataframe
@@ -1270,7 +1220,7 @@ ggplot(combined_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Ph
 
 ```
 
-Facet by site --FL
+Facet by site (FL)
 ```{r}
 # Add timepoint column to each dataframe
 pretop_10_genus_fl$Timepoint <- "Pre-Thaw"
@@ -1297,7 +1247,7 @@ ggplot(combined_fl, aes(x = reorder(Genus, -Abundance), y = Abundance, fill = Ph
 
 
 ```
-Facet by site--CRREL
+Facet by site (CRREL PT)
 ```{r}
 # Add timepoint column to each dataframe
 pretop_10_genus_crrel$Timepoint <- "Pre-Thaw"
@@ -1324,8 +1274,7 @@ ggplot(combined_crrel, aes(x = reorder(Genus, -Abundance), y = Abundance, fill =
 
 ```
 
-
-
+BEO/UT
 ```{r}
 # TOP 5 Genus pre-thaw -- UT
 presamples_ut <- subset_samples(thaw.abs, pre_post_thaw == "pre" & site == "Utqiagvik")
@@ -1410,9 +1359,7 @@ ggplot(posttop_5_genus_ut, aes(x = reorder(Genus, -Abundance), y = Abundance, fi
 
 ```
 
-
-
-Top 5 Phylum pre-thaw 
+Top 5 Phylum pre-thaw  (all sites)
 ```{r}
 # TOP 5 PHYLA pre-thaw
 presamples <- subset_samples(thaw, pre_post_thaw == "pre")
@@ -1438,7 +1385,7 @@ ggplot(pretop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill 
 
 ```
 
-Top 5 phylum post-thaw
+Top 5 phylum post-thaw (all sites)
 ```{r}
 # TOP 5 PHYLA pre-thaw
 postsamples <- subset_samples(thaw, pre_post_thaw == "post")
@@ -1464,6 +1411,7 @@ ggplot(posttop_5_phyla, aes(x = reorder(Phylum, -Abundance), y = Abundance, fill
 
 ```
 
+DIVERSITY METRICS
 1. Shannon and Simpson Diversity metrics
 ```{r}
 # Creating a table of Simpson and Shannon diversity
@@ -1915,7 +1863,6 @@ ggplot(shansimp.meta2, aes(x = site, y = Simpson, color = thaw_type)) +
 ```
 
 4. Shannon and Simpson figure for publication
-
 ```{r}
 # for publicaiton and matching aesthetics
 # Define custom colors for thaw_type
@@ -2088,7 +2035,7 @@ ggplot(shansimp_long, aes(x = site, y = Value, color = thaw_type, shape = thaw_t
      geom_signif(
     comparisons = list(c("CRREL", "FL"), c("CRREL", "Utqiagvik")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    annotations = c("***", "*"),  # Manually annotate with custom significance labels
     y_position = c(42,43),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8)  
@@ -2157,7 +2104,7 @@ simpson.plot <- ggplot(simpson_only, aes(x = site, y = Value, color = thaw_type,
 
 print(simpson.plot)
 ```
-
+Alpha diversity plot for publication
 ```{r}
 # Plot shannon and simpson plots together 
 library(ggplot2)
@@ -2175,27 +2122,6 @@ print(alpha.combined_plots)
 ggsave("~/GitHub/thaw.response/Figures/shan.simp.combo.png", alpha.combined_plots, width = 12, height = 5)
 ```
 
-
-
-
-
-
-
-
-
-
-
-```{r}
-scale_shape_manual(values = c("no_thaw" = 17, "thaw" = 16)) +  # Triangle and circle
-  theme_classic() +
-  xlab("Site") +
-  ylab("Alpha Diversity Measure") +
-  facet_wrap(~Diversity_Metric, scales = "free_y") +
-  theme(text = element_text(size = 12)) +
-  labs(shape = "Treatment")  # Legend title for shape
-
-```
-Left off: Trying to get significance codes on the plot but I just can't seem to figure it out, may need to ask co-authors figure out another time, need to move on 
 
 OLD CODE
 ```{r}
@@ -2262,8 +2188,7 @@ plot_richness(dorm1rarefied, x = "site", measures = c("Observed", "Shannon")) + 
 ```
 
 
-For publication: 
-Plotting as a black and white figure, denoting pre as triangles and post as circles
+Plotting as a black and white figure, denoting pre as triangles and post as circles (not my favorite)
 ```{r}
 ggplot(shansimp_long, aes(x = site, y = Value, shape = thaw_type, color = thaw_type)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Black boxplots
@@ -2278,7 +2203,7 @@ ggplot(shansimp_long, aes(x = site, y = Value, shape = thaw_type, color = thaw_t
 
 ```
 
-
+DISPERSION ANALYSIS
 Beta dispersion analysis: Permutest
 ```{r}
 # Working with distance matrices 
@@ -2446,8 +2371,6 @@ for (i in 1:100) {
 
 
 ```{r}
-
-
 # Using the base Kruskal test we find that it's the same as above with the FSA package Kruskal test 
 #stats::kruskal.test(ssmeta$Simpson ~ site, data = ssmeta)
 # Checking to see if Simpson is normally distributed
@@ -2495,7 +2418,6 @@ plot_richness(dorm1rarefied, x = "site", measures = c("Shannon"), color = "pre_p
 
 Extra code that was not used:
 ```{r}
-#********************************************************************************
 # BELOW IS EXTRA CODE (THAT HAS NOT BEEN USED) FOR MAKING A BAR PLOT
 #Stacked bar plot (https://deneflab.github.io/MicrobeMiseq/demos/mothur_2_phyloseq.html)
 dorm_phylum <- dorm1rarefied %>%
@@ -2510,7 +2432,6 @@ phylum_colors <- c(
   "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
   "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861"
 )
-
 
 # Plot with ggplot 
 ggplot(dorm_phylum, aes(x = pre_post_thaw, y = Abundance, fill = Phylum)) + 

@@ -4,18 +4,13 @@ author: "Joy O'Brien"
 date: "2025-03-03"
 output: html_document
 ---
-THIS IS THE ANOVAS FOR SITE COMPARISON SCIPT
-Data we are working with here: We will be running ANOVAs on DOC data post thaw, TDN data post thaw, 
-copy numbers pre thaw and copy numbers post thaw and cum respiration across sites
-
-The reason we are NOT including pre thaw data here is because the pre thaw data is not properly replicated (due to lack of soil to replicate). 
-
+ 
+Set wd
 ```{r setup, include=FALSE}
 knitr::opts_knit$set(root.dir = "Users/joyobrien/GitHub/thaw.response")
 ```
 
-
-set theme
+(set theme)
 ```{r}
 library(paletteer)
 library(ggplot2)
@@ -46,7 +41,7 @@ theme_set(theme_classic() +
         )) 
 colors <-paletteer_d("ggthemes::Miller_Stone")
 ```
-
+1. Load libraries
 ```{r}
 # Load libraries
 library(vegan)
@@ -60,16 +55,16 @@ library(multcompView)
 library(rcompanion) # attempted to use this to get the significance codes from KW test
 library(agricolae) # used to get the significance codes from the KW test
 ```
-1. Load data
+2. Load data
 ```{r}
-# Read in the data (this is all accessible in the incubation_physical_chemical.xlsx sheet on Ernakovich Lab Box Folder)
-resp <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Respiration_cum")
-pH <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "pH")
-EC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "EC")
-TC_TN <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "TC_TN_raw_edit")
-GWC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "GWC")
-resp_tctn <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Resp_TC_TN")
-cpnumb <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "copynumber_all") 
+# Read in the data (this is all accessible in the incubation_physical_chemical.xlsx sheet
+resp <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Respiration_cum") #cumulative respiration
+pH <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "pH") #pH
+EC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "EC") # electrical conductivity
+TC_TN <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "TC_TN_raw_edit") # total carbon and nitrogen
+GWC <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "GWC") #gravimentric water content
+resp_tctn <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "Resp_TC_TN") # cumulative respiration with total carbon and total nitrogen
+cpnumb <- read_excel("~/GitHub/thaw.response/Data/thaw_physical_chemical_data.xlsx", sheet = "copynumber_all")  #16S rRNA copy number
 ```
 
 PART 1. COMPARING PRE-THAW AND POST-THAW ABIOTIC PROPERTIES
@@ -125,7 +120,6 @@ print(phposttukey)
   #Utqiagvik-FL    -0.715 -0.9374316 -0.49256836 0.0018593
 ```
 
-
 2. EC
 ```{r}
 # NOW WE WILL LOOK AT ELECTRICAL CONDUCTIVITY (EC)
@@ -179,9 +173,8 @@ print(TN.kruskal) #p = 0.001
 dunnTest(N ~ site, data = TC_TN, method = 'bh')
 ```
 
-
 4. GWC
-```{r setup, include=FALSE}
+```{r}
 # Now we are going to look at GWC across sites pre and post thaw 
 GWC_pre_thaw <- GWC[GWC$pre_post_thaw == "pre", ]
 GWC_post_thaw <- GWC[GWC$pre_post_thaw == "post", ]
@@ -275,7 +268,7 @@ ggplot(resp, aes(x = site, y = Cumulative_Respiration, fill = site)) +
     geom_signif(
     comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("***", "**"),  # You can manually annotate with custom significance labels
+    annotations = c("***", "**"),  # Manually annotate with custom significance labels
     y_position = c(1680,1730),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8                   # Adjust the length of the annotation line
@@ -312,10 +305,7 @@ post_thaw_copy$sample_ID <- sub("_POST_SOIL", "", post_thaw_copy$sample_ID)
 pre_thaw_copy$sample_ID <- sub("_PRE_SOIL", "", pre_thaw_copy$sample_ID)
 merged<- merge(pre_thaw_copy, post_thaw_copy, by = "sample_ID")
 
-# Remove the unnec
-
-# Keep all columns from pre_thaw_copy, and just the columns you need from post_thaw_copy
-# (excluding redundant ones like site, core, etc.)
+# Keep all columns from pre_thaw_copy, and just the columns needed from post_thaw_copy
 
 post <- post_thaw_copy[, c("sample_ID", "copy_numb")]
 colnames(post)[colnames(post) == "copy_numb"] <- "post_copy"
@@ -346,7 +336,6 @@ kruskal.test(change_in_copy ~ site, data = merged)  # non-parametric
 dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
 ```
 
-
 3C.Change in copy number figure
 ```{r}
 # Changing the order that they appear
@@ -364,11 +353,11 @@ ggplot(merged, aes(x = site, y = change_in_copy, fill = site)) +
     axis.text = element_text(size = 12, color = "black"),
     #axis.title = element_text(size = 12, face = "bold"),
     #plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
-    legend.position = "none") +  # Remove legend if unnecessary
+    legend.position = "none") +  # Remove legend 
     geom_signif(
     comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("*", "*"),  # You can manually annotate with custom significance labels
+    annotations = c("*", "*"),  # Manually annotate with custom significance labels
     y_position = c(4000000,4095000),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8)
@@ -385,8 +374,6 @@ dunnTest(change_in_copy ~ site, data = merged, method = 'bh')
 
 C and N: Plotting Raw data on the top (do box plot, I don't think it makes sense to correlate cumulative resp with pre-thaw %C and %N)
 ```{r}
-
-
 # Rename the sites for publication
 library(dplyr)
 
@@ -413,7 +400,7 @@ ggplot(TC_TN, aes(x = site, y = C, fill = site)) +
     geom_signif(
     comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    annotations = c("***", "*"),  # Manually annotate with custom significance labels
     y_position = c(42,43),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8)    
@@ -436,19 +423,14 @@ ggplot(TC_TN, aes(x = site, y = N, fill = site)) +
     geom_signif(
     comparisons = list(c("PT", "FL"), c("PT", "BEO")),  # Specify the groups to compare
     map_signif_level = TRUE,  # Automatically display significance codes like "*", "**", etc.
-    annotations = c("***", "*"),  # You can manually annotate with custom significance labels
+    annotations = c("***", "*"),  # Manually annotate with custom significance labels
     y_position = c(2.35,2.4),  # Adjust y-position of the annotations
     tip_length = 0.03,
     textsize = 8)  
 ```
 
-
-
-
-
-
-
-4. GLM with C and N - where do we merge to make resptctn, that needs to be updated with the replicates
+OLD CODE (C and N linear models):
+4. GLM with C and N
 ```{r}
 # Trying GLM since this data is normally distributed 
 # C
@@ -477,7 +459,6 @@ ggplot(resp_tctn, aes(x = C, y = Cumulative_Respiration)) +
   )
 
 ```
-
 
 ```{r}
 # N
@@ -511,8 +492,6 @@ ggplot(resp_tctn, aes(x = N, y = Cumulative_Respiration)) +
   )
 ```
 
-
-
 ```{r}
 # Checking the relationship using all of the replicates (Jessica asked to make sure that this relationship is strong)
 respcheck <- read_excel("~/Desktop/incubation_physical_chemical.xlsx", sheet = "Resp_TC_TN_check")
@@ -538,7 +517,3 @@ summary(linearmodel_Crespcheck)
 "#4169e1"
 "#6a7bd7"
 ```
-
-
-
-

@@ -231,7 +231,7 @@ err_R_crrel = ICu_R_crrel-RR_crrel
 
 # Significance
 Sig_R_crrel = ICl_R_crrel*ICu_R_crrel
-Sig_adjust_R_crrel <- p.adjust(Sig_R_crrel, method = "fdr") # only 1 asv is significant ?? 
+Sig_adjust_R_crrel <- p.adjust(Sig_R_crrel, method = "fdr") 
 
 # Creating data frame w/ 3 coloums (RR, err, Sig) 
 R_crrel = as.data.frame(cbind(RR_crrel,err_R_crrel,Sig_R_crrel, ICl_R_crrel, ICu_R_crrel))

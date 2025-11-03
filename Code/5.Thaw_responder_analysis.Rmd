@@ -4,11 +4,11 @@ author: "Joy O'Brien"
 date: "2025-05-02"
 output: html_document
 ---
-Need to fix/know: Are we working with C.ASVs? 
 
 Thaw response code (response ratio analysis code from Hannah Holland-Moritz, modeled and modified from the following publication: Fan, K., Holland-Moritz, H., Walsh, C., Guo, X., Wang, D., Bai, Y., Zhu, Y., Fierer, N. & Chu, H. (2022). 
 # Identification of the rhizosphere microbes that actively consume plant-derived carbon. Soil Biology and Biochemistry, 166, 108577. 
 # https://doi.org/10.1016/j.soilbio.2022.108577)
+
 1. Set working directory
 ```{r setup, include=FALSE}
 setwd("~/GitHub/thaw.response")
@@ -29,14 +29,6 @@ library(readr)
 library(readxl)
 library(ARPobservation)
 ```
-
-Employing Hannah & Jessica's feedback:
-- Make this analysis absolute abundance
-- Take each of the sites--dataframes from each site, stack them together, run code on larger frame (site columm) - top 100 thaw responders from each site, bind rows together
-- Plots will have 3 points for every organism, 1 point represents the response from one organism in one site
-- Color = site , position dodge by site
-
-
 Edit: Calculating absolute abundance
 3. Calculating absolute abundance (copying from script 4)
 ```{r}
@@ -61,7 +53,7 @@ scaling_factors <- qPCR_vec / total_reads
 
 # Multiply each column (sample) in the OTU matrix by its scaling factor
 otu_abs_abund <- sweep(otu_mat, 2, scaling_factors, FUN = "*") # we get some NAs here because samples are missing 
-# we do not get nas here
+
 ```
 
 3A. Checking out the samples that have NA
@@ -124,8 +116,6 @@ absolute_otu <- sweep(otu_mat_subset, 2, scaling_factors, `*`)
 
 ```
 
-
-
 4. Make df from phyloseq object
 ```{r}
 # Load data
@@ -157,12 +147,11 @@ thaw.abs <- phyloseq(otu_abs,thaw.meta,thaw_tax)
 
 
 #thaw.response.abs <- thaw.abs@otu_table
-#thaw.response.abs <- as.data.frame(thaw.response.abs) # COME BACK AND PICK UP HERE I DONT KNOW WHY THERE IS CONFUSION
+#thaw.response.abs <- as.data.frame(thaw.response.abs) 
 ```
 
 3A. Assessing thaw response (all 3 sites combined and all responders)
 ```{r}
-# dont know why i had to remove samples 41 and 42 from the line of number code below 
 ToF <- thaw_response; #changed from thaw_response to thaw.abs
 ToF[ToF > 0] <- 1 #anything above 0 is 1 (Presence absence table) ##
 
@@ -416,7 +405,6 @@ ggplot(tax_sig_top_crrel, aes(x = reorder(ID, RR_crrel), y = RR_crrel, color = P
 ```
 
 5A. Top thaw responders (positive response) (CRREL) 
-Pick up here- get rid of NA taxa and use these plots in the manuscript for each site
 ```{r}
 # Top thaw responders (positive response)
 tax_sig_up_crrel <- tax_response_crrel %>%
@@ -467,11 +455,6 @@ crrel_plot
 - top_up_crrel
 - top_up_fl
 - top_up_ut
-
-# Changing to top 50 from each site to see if that helps with the  crowding on all sites plot
-
-
-
 
 
 6. Assessing thaw response by site (Farmer's Loop FL)
@@ -568,10 +551,8 @@ ggplot(tax_sig_top_fl, aes(x = reorder(ID, RR_fl), y = RR_fl, color = Phylum)) +
   theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
 
-# Take the top 100 sig fl thaw responders 
-
 ```
-6B. Top thaw responders (FL Farmer's Loop)
+6B. Top 50 thaw responders (FL Farmer's Loop)
 ```{r}
 # Top thaw responders (positive response)
 tax_sig_up_fl <- tax_response_fl %>%
@@ -618,7 +599,7 @@ fl_plot
 #   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
 
 ```
-7. Assessing thaw responders by site (Utqiagvik, UT)
+7. Assessing thaw responders by site (Utqiagvik, BEO)
 ```{r}
 # Subset the data out for CRREL sites
 t.r.ut <- as.data.frame(thaw_response %>% select(matches("BEO1|BEO2")))
@@ -633,7 +614,7 @@ pre_col_indices_ut
 post_col_indices_ut
 ```
 
-7A. UT Thaw response (positive and negative)
+7A. BEO thaw response (positive and negative)
 ```{r}
 # Using relative abundance table, creates average
 ave1_ut = apply(t.r.ut[,c(2,4,6,8,10,12,14,16)],1,mean,na.rm = TRUE); # Control
@@ -700,7 +681,7 @@ tax_sig_ut <- tax_response_ut %>% filter(Significance != "Not Significant")
 # Top responders
 tax_sig_top_ut <- tax_sig_ut %>%
   arrange(desc(abs(RR_ut))) %>%
-  slice(1:100)
+  slice(1:100) # top 100
 
 # Plot
 ggplot(tax_sig_top_ut, aes(x = reorder(ID, RR_ut), y = RR_ut, color = Phylum)) + 
@@ -712,7 +693,7 @@ ggplot(tax_sig_top_ut, aes(x = reorder(ID, RR_ut), y = RR_ut, color = Phylum)) +
   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
 
 ```
-7B. Top thaw responders (Utqiagvik, UT)
+7B. Top 50 thaw responders (Utqiagvik, BEO
 ```{r}
 # Top thaw responders (positive response)
 tax_sig_up_ut <- tax_response_ut %>%
@@ -742,26 +723,6 @@ ut_plot <- ggplot(top_up_ut, aes(x = reorder(Genus, RR_ut), y = RR_ut, color = P
 
 ut_plot
 #ggsave("~/GitHub/thaw.response/Figures/ut_top100plot.png", width = 12, height = 12, units = "in", dpi = 300)
-
-```
-
-
-```{r}
-# # Top thaw decliners (negative response)
-# tax_sig_down_ut <- tax_response_ut %>%
-#   filter(Significance == "Down")
-# 
-# down_up_ut <- tax_sig_down_ut %>%
-#   arrange(desc(RR_ut)) %>%
-#   slice(1:100)  # change 100 to however many you want
-# 
-# ggplot(down_up_ut, aes(x = reorder(ID, RR_ut), y = RR_ut, color = Phylum)) + 
-#   geom_pointrange(aes(ymin = ICl_R_ut, ymax = ICu_R_ut)) +
-#   geom_hline(yintercept = 0, linetype = 2) +
-#   facet_wrap(~Phylum, scales = "free_x") +
-#   theme_bw() +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-#   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
 
 ```
 8. Common positive thaw responders found in all 3 sites
@@ -835,12 +796,10 @@ ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Phylum)) 
        title = "Common Positive Thaw Responders Across Sites")
 ```
 
-
+Plot common thaw responders
 ```{r}
 library(dplyr)
 library(tidyr)
-
-
 
 ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Family)) +
   geom_pointrange(aes(ymin = ICl_R, ymax = ICu_R)) +
@@ -853,9 +812,8 @@ ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Family)) 
        title = "Common Positive Thaw Responders Across Sites")
 ```
 
-
+Rename the sites for publication
 ```{r}
-
 #Rename the sites for publication
 library(dplyr)
 
@@ -912,7 +870,6 @@ combined_common_up$fold_change <- exp(combined_common_up$RR)
 
 
 Editing:
-Okay right away this is wrong because it needs to come from the top up datasets 
 ```{r}
 # Bringing all the top 100 positive thaw responders together to one dataset
 # First, add a column to each dataset identifying the site
@@ -955,7 +912,6 @@ tax_sig_top_ut <- tax_sig_top_ut %>%
   mutate(original_Site = "UT")
 
 metaRR <- bind_rows(tax_sig_top_crrel, tax_sig_top_fl, tax_sig_top_ut)
-
 
 
 # Then bind them together
@@ -1005,10 +961,9 @@ ggsave("~/GitHub/thaw.response/Figures/all_top50plot.png", width = 12, height = 
   #labs(x = "Genus", y = "Log Response Ratio (Thaw/Post vs Pre)")
 ```
 
-
+Thaw response plot for publication
 ```{r}
 # Trying to make the plot more readabable
-
 library(dplyr)
 library(ggplot2)
 library(tidytext)   # for reorder_within() / scale_x_reordered()
@@ -1046,11 +1001,6 @@ ggsave("~/GitHub/thaw.response/Figures/all_top100plot_readable.png", width = 12,
 ```
 
 
-# Come back and do the following:
-- Check and vet all parts of this script (done
-- Get significance values to report 
-- Thaw responders for all sites --> positive --> common positive thaw responders across sites --> (top 100 from each site) --> plot the common thaw responders with the multi-point phylum plot 
-- 
 Redo: Okay bringing together the positive only datasets (not the top 100 of the positive)
 ```{r}
 library(dplyr)
@@ -1131,9 +1081,7 @@ ggplot(combined_common_up, aes(x = reorder(Genus, RR), y = RR, color = Phylum)) 
        title = "Common Positive Thaw Responders Across Sites")
 ```
 
-# Pre and post thaw abundance plots 
-
-
+Pre and post thaw abundance plots 
 ```{r}
 library(tidyverse)
 absolute_otu <- as.data.frame(absolute_otu)
@@ -1195,9 +1143,7 @@ plot_bar(thaw_phylum,
 
 ```
 
-# Running response ratio analysis with the clr transformed data to see if rarefying makes any difference in the results (to respond to reviewer 1)
-# need to do based on absolute abundance as well 
-
+# Running response ratio analysis with the clr transformed data to see if rarefying makes any difference in the results
 # Load in data
 ```{r}
 clr_data <- read.csv("~/GitHub/thaw.response/Data/ASV_table_clr_transformed_wide_format.csv")
@@ -1302,7 +1248,6 @@ ggplot(tax_sig_top, aes(x = reorder(ID, RR), y = RR, color = Phylum)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 70, hjust = 1)) +
   labs(x = "ASV ID", y = "Log Response Ratio (Thaw/Post vs Pre)")
-
 
 
 ```

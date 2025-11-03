@@ -5,6 +5,7 @@ date: "2024-11-10"
 output: html_document
 ---
 
+1. Install packages
 ```{r}
 install.packages("dplyr")
 install.packages("readxl")    
@@ -15,6 +16,7 @@ install.packages("BiocManager")
 BiocManager::install("phyloseq")
 ```
 
+2. Load packages
 ```{r}
 # Load packages 
 library("phyloseq")
@@ -25,6 +27,7 @@ library("tibble")       # Needed for converting column to row names
 library("vegan")        #Used for rarifying
 ```
 
+3. Read in data and parse
 ```{r}
 # Read in phyloseq object and see if all 3 datasets can be separated
 phylo <- readRDS("~/GitHub/thaw.response/Data/new_merged_phyloseqobj.rds")
@@ -34,7 +37,7 @@ seq_tab.raw <- as.data.frame(otu_table(phylo))
 taxonomy <- as.data.frame(tax_table(phylo))
 metadata <- as.data.frame(sample_data(phylo))
 
-# Merge consensus sequence to ASV ID numbers
+# Merge consensus sequence to ASV ID numbers (From merging two sequence runs)
 # Load key 
 ASV_OTU_key <- read.table("~/GitHub/thaw.response/Data/ASVnumber_OTUid_key.txt", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
 
@@ -74,7 +77,6 @@ seq_tab$sequence <- NULL
 
 ```
 
-
 OLD
 ```{r}
 # Read the data into R from excel file incubation_16S_reseq.xlsx 
@@ -99,8 +101,7 @@ metadata <- metadata %>%
   mutate(core_rep = gsub("_PRE_SOIL", "", core_rep))
 ```
 
-
-
+4. Create new phyloseq object
 ```{r}
 # Transform into matrices 
 seq_tab <- as.matrix(seq_tab)
@@ -130,7 +131,7 @@ thaw1 <- subset_taxa(thaw1, Order != "Chloroplast")
 thaw1  # 9213 taxa
 # Number of taxa removed from mitochondria and chloroplasts: 16048-9213 = 6835 # calculate as % reads for publication --> 42.6%
 ```
-
+5. Remove sequence blanks from dataset
 ```{r}
 # Remove sequence blanks from the data set and PCR blanks and FL1C4 REP 8 POST THAW
 thaw_noblank <- subset_samples(thaw1, !(sample_ID %in% c("PCR_BLANK", "DNA_BLANK_1_POST_THAW_SOIL", "DNA_BLANK_1_PRE_THAW_SOIL", "DNA_BLANK_2_POST_THAW_SOIL", "DNA_BLANK_2_PRE_THAW_SOIL", "FL1C4_R8_POST_SOIL")))
@@ -138,6 +139,8 @@ thaw_noblank <- subset_samples(thaw1, !(sample_ID %in% c("PCR_BLANK", "DNA_BLANK
 # Check to see if samples were removed (should be 5 for the re-seq round)
 thaw_noblank # this checks out, 6 samples were removed
 ```
+
+(Creating non-rarefiled ASV table for clr normalization check and saving)
 ```{r}
 # Filtered but not rarefied ASV table for clr normalization post-reviewer check 
 ASV_tab <- as.data.frame(thaw1@otu_table)
@@ -153,7 +156,7 @@ write.csv(ASV_tab, "~/GitHub/thaw.response/Data/ASV_table_prerare.csv", row.name
 write.csv(mapping_tab, "~/GitHub/thaw.response/Data/mapping_file.csv", row.names = FALSE)
 ```
 
-
+(Summing sequence counts)
 ```{r}
 # Extract the OTU table from the phyloseq object
 otu_table <- otu_table(thaw_noblank)
@@ -167,16 +170,11 @@ asv_sums <- colSums(otu_matrix)
 # Print the results
 print(asv_sums)
 hist(asv_sums)
-
-```
-
-```{r}
-# Print the sums per sample
-print(asv_sums)
-
 # Visualize with a histogram
 hist(sort(colSums(otu_table(thaw_noblank)))) 
-
+```
+6. Rarify data
+```{r}
 # Rarefying the data 
 otu_rarify <- as.data.frame(thaw_noblank@otu_table)
 rarecurve(otu_rarify, step = 50, cex = 0.5, label = FALSE)
@@ -186,28 +184,26 @@ thaw.rarify <- rarefy_even_depth(thaw_noblank, rngseed = 1, sample.size = 5000, 
 rarify.check <- as.data.frame(thaw.rarify@otu_table)
 rarecurve(rarify.check, step = 50, cex = 0.5, label = FALSE)
 
-
-
 # Create the rarified OTU table
 otu.rarify.table <- otu_table(thaw.rarify)
 ```
-
+7. NMDS
 ```{r}
 # Transform the OTU table 
 thaw_transformed <- t(sqrt(otu.rarify.table))
 
 # Create a distance matrix using vegan and bray
 dm_thaw <- vegdist(thaw_transformed, method = "bray")
-# I did the following to check how many samples made it through rarifaction
+# Check how many samples made it through rarifaction
 dm_thaw_mat <- as.matrix(dm_thaw)
 
-# Run an NMDS (stress values indicate how well the variation is represented, stress less than 0.05 is good, below 0.3 is poor, below 0.2 is okay) pp: NIce comment, here's the link for that info: https://jonlefcheck.net/2012/10/24/nmds-tutorial-in-r/
+# Run an NMDS (stress values indicate how well the variation is represented, stress less than 0.05 is good, below 0.3 is poor, below 0.2 is okay), here's the link for that info: https://jonlefcheck.net/2012/10/24/nmds-tutorial-in-r/
 thaw.nmds <- metaMDS(dm_thaw, k = 2, trymax = 1500) ## "k" is the number of axes, sometimes 2 is not enough, "trymax" is the number of times it tries to find solutions
 print(thaw.nmds)
 plot(thaw.nmds)
 
 ```
-Exploring PCoA plot instead of nmds
+8. Exploring PCoA plot instead of NMDS
 ```{r}
 # Transform the OTU table 
 thaw_transformed <- t(sqrt(otu.rarify.table))
@@ -233,6 +229,7 @@ plot_ordination(
   scale_shape_discrete("Treatment") +
   scale_shape_manual("Treatment", labels = c("Pre-thaw", "Post-thaw"), values = c(2, 1))
 ```
+(Modifying PCoA plot)
 ```{r}
 # Changing the points so there are open and closed circle
 # Making sure the legend will show pre before post
@@ -276,8 +273,8 @@ scale_shape_manual(
 
 
 # Now connect paired samples with dotted lines
-
 ```
+
 ```{r}
 
 library(dplyr)
@@ -337,6 +334,7 @@ table(sample_data(thaw.rarify)$pre_post_thaw)
 anyDuplicated(sample_data(thaw.rarify)$core)
 
 ```
+
 ```{r}
 # Extract sample coordinates from the PCoA object
 ordination_scores <- as.data.frame(thaw.pcoa$vectors)
@@ -392,7 +390,6 @@ line_segments <- ordination_scores %>%
   ) %>%
   drop_na()  # drops rows missing either pre or post coords
 
-
 plot_ordination(
   physeq = thaw.rarify,
   ordination = thaw.pcoa,
@@ -427,12 +424,8 @@ plot_ordination(
 
 
 ```
-Okay so the above code shows the lines by core 
-but we want to connect lines to inidivudal samples
+(Modifying plot to show lines between pre and post samples)
 ```{r}
-
-
-
 library(dplyr)
 library(tidyr)
 library(phyloseq)
@@ -496,7 +489,7 @@ base_plot +
     labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
   )
 ```
-# Plotting with correct codes for sites post-review 
+(Plotting with correct site codes CRREL = PT, FL = FL, Utqiagvik = BEO)
 ```{r}
 library(dplyr)
 library(tidyr)
@@ -504,7 +497,7 @@ library(phyloseq)
 library(ggplot2)
 library(forcats)
 
-# 1. Extract ordination scores from your PCoA object
+# 1. Extract ordination scores from PCoA object
 ordination_scores <- as.data.frame(thaw.pcoa$vectors)
 ordination_scores$sample_ID <- rownames(ordination_scores)
 
@@ -516,7 +509,6 @@ metadata$sample_ID <- rownames(metadata)
 ordination_scores <- left_join(ordination_scores, metadata, by = "sample_ID")
 
 # 4. Create a cleaned pair_ID by removing the pre/post suffix from sample_ID
-#    Adjust regex to your sample ID naming pattern as needed
 ordination_scores <- ordination_scores %>%
   mutate(
     pair_ID = gsub("_(PRE|POST).*", "", sample_ID),
@@ -526,14 +518,13 @@ ordination_scores <- ordination_scores %>%
     )
   )
 
-
 # 5. Pivot to get pre and post sample coordinates side-by-side for line plotting
 line_segments <- ordination_scores %>%
   select(pair_ID, pre_post_thaw, Axis.1, Axis.2) %>%
   pivot_wider(names_from = pre_post_thaw, values_from = c(Axis.1, Axis.2)) %>%
   drop_na()  # drop pairs where either pre or post is missing
 
-# --- Rename and order site labels in the phyloseq object ---
+# 6. Rename and order site labels in the phyloseq object 
 sd <- data.frame(sample_data(thaw.rarify))
 
 sd$site <- recode(sd$site,
@@ -542,7 +533,7 @@ sd$site <- recode(sd$site,
   "FL"        = "FL"
 )
 
-# set the display order in legend, if you like
+# set the display order in legend
 sd$site <- factor(sd$site,
   levels = c("PT", "BEO", "FL")
 )
@@ -593,40 +584,7 @@ base_plot +
 ```
 
 
-
-
-
-
-
-
-```{r}
-
-base_plot +
-  geom_segment(
-    data = line_segments,
-    aes(x = Axis.1_pre, y = Axis.2_pre, xend = Axis.1_post, yend = Axis.2_post),
-    linetype = "dotted", color = "black", inherit.aes = FALSE
-  ) +
-  geom_point(size = 3, alpha = 0.9) +  # Single point layer
-  theme_classic() +
-  theme(axis.text = element_text(size = 18)) +
-  labs(
-    x = paste0("PCoA1 (", round(thaw.pcoa$values$Relative_eig[1] * 100, 1), "%)"),
-    y = paste0("PCoA2 (", round(thaw.pcoa$values$Relative_eig[2] * 100, 1), "%)")
-  ) +
-  scale_color_manual(
-    values = c("CRREL" = "#1b9e77", "FL" = "#d95f02", "Utqiagvik" = "#7570b3"),
-    name = "Site"
-  ) +
-  scale_shape_manual(
-    name = "Treatment",
-    values = c("pre" = 1, "post" = 16),  # Shape 1 = open circle, 16 = filled
-    labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
-  )
-
-```
-
-
+Old Code
 ```{r}
 plot_ordination(
   physeq = thaw.rarify,
@@ -656,11 +614,6 @@ plot_ordination(
     labels = c("pre" = "Pre-thaw", "post" = "Post-thaw")
   )
 
-
-
-
-
-
 ```
 
 
@@ -682,11 +635,9 @@ plot_ordination(
   scale_shape_manual("Treatment", labels = c("Pre-thaw", "Post-thaw"), values = c(2, 1))
 
 
-
 ```
 
 ```{r}
-# For publication
 library(ggplot2)
 library(RColorBrewer)
 
@@ -726,20 +677,10 @@ plot_ordination(
 
 ```
 
-
-
 ```{r}
-# Save the phyloseq object to yourfolder if this is your final object (save individual parts of the phyloseq object)
-
+# Save the phyloseq object to folder if this is final object (save individual parts of the phyloseq object)
 saveRDS(thaw.rarify,"~/GitHub/thaw.response/Data/thaw_phyloseq.rds")
 saveRDS(thaw.rarify@otu_table,"~/GitHub/thaw.response/Data/thaw_OTU_phyloseq.rds")
 saveRDS(thaw.rarify@tax_table,"~/GitHub/thaw.response/Data/thaw_tax_phyloseq.rds" )
 saveRDS(thaw.rarify@sam_data,"~/GitHub/thaw.response/Data/thaw_metadata_phyloseq.rds")
 ```
-
-To satisfy reviewers, showing abundance pre and post thaw 
-```{r}
-
-```
-
-```{r}
